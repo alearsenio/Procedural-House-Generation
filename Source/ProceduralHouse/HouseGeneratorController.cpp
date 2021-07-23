@@ -21,7 +21,7 @@ void UHouseGeneratorController::BeginPlay()
 	// ...
 	FVector Location(0, 0, 0);
 	FRotator Rotation(0, 0, 0);
-	
+
 	House = Building(1, GridWidht, GridHeight, 1);
 	Room LivingRoom = House.AddRoom(16, TEXT("LivingRoom"), 0);
 	Room DiningRoom = House.AddRoom(20, TEXT("DiningRoom"), 1);
@@ -31,9 +31,17 @@ void UHouseGeneratorController::BeginPlay()
 
 
 	House.GenerateFloorPlan();
-	for (int i = 0; i < House.EmptyConnectectBlocks.size(); i++)
+	UE_LOG(LogTemp, Warning, TEXT(" %d"), House.HouseBlocks.size());
+	for (int i = 0; i < House.Rooms.size(); i++)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%d %d"), House.EmptyConnectectBlocks[i]->PosX, House.EmptyConnectectBlocks[i]->PosY);
+		for (int j = 0; j < House.Rooms[i]->ConnectedRooms.size(); j++)
+		{
+			UE_LOG(LogTemp, Warning, TEXT(" %d"), House.Rooms[i]->ConnectedRooms[j]->RoomId);
+		}
+	}
+	for (int i = 0; i < House.HouseBlocks.size(); i++)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%d  %d"), House.HouseBlocks[i]->PosX, House.HouseBlocks[i]->PosY);
 	}
 	SpawnObject(Location, Rotation);
 }
@@ -50,25 +58,31 @@ void UHouseGeneratorController::TickComponent(float DeltaTime, ELevelTick TickTy
 void UHouseGeneratorController::SpawnObject(FVector Location, FRotator Rotation)
 {
 	FActorSpawnParameters SpawnParams;
-	for (size_t i = 0; i < House.TerrainWidth; i++)
+	if (RoomCube && CorridorCube && ConnectedCube)
 	{
-		for (size_t j = 0; j < House.TerrainHeight; j++)
+		for (int i = 0; i < House.HouseBlocks.size(); i++)
 		{
-			if (House.HouseGrid[i][j].BlockType != Empty && RoomCube && CorridorCube && ConnectedCube) 
+			FVector NewLocation(House.HouseBlocks[i]->PosY * 100, House.HouseBlocks[i]->PosX * 100, 0);
+			if (House.HouseBlocks[i]->BlockType == RoomInternalBlock || House.HouseBlocks[i]->BlockType == RoomEdgeBlock)
 			{
-				FVector NewLocation(i * 100, j * 100, 0);
-				if (House.HouseGrid[i][j].BlockType == RoomInternalBlock || House.HouseGrid[i][j].BlockType == RoomEdgeBlock)
+				AActor* SpawnActorRef = GetWorld()->SpawnActor<AActor>(RoomCube, NewLocation, Rotation, SpawnParams);
+				if (House.HouseBlocks[i]->BlockType == RoomEdgeBlock) 
 				{
-					AActor* SpawnActorRef = GetWorld()->SpawnActor<AActor>(RoomCube, NewLocation, Rotation, SpawnParams);
+					FVector NewLocation2(House.HouseBlocks[i]->PosY * 100, House.HouseBlocks[i]->PosX * 100, 100);
+					SpawnActorRef = GetWorld()->SpawnActor<AActor>(RoomCube, NewLocation2, Rotation, SpawnParams);
+					FVector NewLocation3(House.HouseBlocks[i]->PosY * 100, House.HouseBlocks[i]->PosX * 100, 200);
+					SpawnActorRef = GetWorld()->SpawnActor<AActor>(RoomCube, NewLocation3, Rotation, SpawnParams);
+
+
 				}
-				else if (House.HouseGrid[i][j].BlockType == CorridorBlock)
-				{
-					AActor* SpawnActorRef = GetWorld()->SpawnActor<AActor>(CorridorCube, NewLocation, Rotation, SpawnParams);
-				}
-				else if(House.HouseGrid[i][j].BlockType == EmptyConnectedBlock)
-				{
-					AActor* SpawnActorRef = GetWorld()->SpawnActor<AActor>(ConnectedCube, NewLocation, Rotation, SpawnParams);
-				}
+			}
+			else if (House.HouseBlocks[i]->BlockType == CorridorBlock)
+			{
+				AActor* SpawnActorRef = GetWorld()->SpawnActor<AActor>(CorridorCube, NewLocation, Rotation, SpawnParams);
+			}
+			else if (House.HouseBlocks[i]->BlockType == EmptyConnectedBlock)
+			{
+				AActor* SpawnActorRef = GetWorld()->SpawnActor<AActor>(ConnectedCube, NewLocation, Rotation, SpawnParams);
 			}
 		}
 	}

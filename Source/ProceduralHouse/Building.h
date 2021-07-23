@@ -19,12 +19,18 @@ public:
 	bool checkIfSpaceAvaiable(int startingPointX, int StartingPointY, int width, int height, BuildDirection BuildDirection);
 	void GenerateFloorPlan();
 	void CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight);
+	Block* GetBlock(int X, int Y);
+	Block* AddBlock(int X, int Y, BlockType BlockType, Room* OwnerRoom);
+
 	//dimensions of the building
 	int BlockSize = 0;
 	int TerrainWidth = 0;
 	int TerrainHeight = 0;
 	int CorridorWidth = 0;
-
+	Block* MostLeftBlock = nullptr;
+	Block* MostRightBlock = nullptr;
+	Block* MostDownBlock = nullptr;
+	Block* MostUpBlock = nullptr;
 	//vector of rooms in the building
 	std::vector<Room*> Rooms;
 	//vector of blocks used to connect the rooms
@@ -32,5 +38,5 @@ public:
 	//vector of empty connected blocks
 	std::vector<Block*> EmptyConnectectBlocks;
 	//matrix of blocks for the building
-	std::vector<std::vector<Block>> HouseGrid;
+	std::vector<Block*> HouseBlocks;
 };

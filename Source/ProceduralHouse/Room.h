@@ -15,7 +15,7 @@ public:
 	int Area = 0;
 	int RoomId = 0;
 	FString Name = "";
-	std::vector<Block> RoomBlocks;
+	std::vector<Block*> RoomBlocks;
 	std::vector<Room*> ConnectedRooms;
 	bool IsPositioned = false;
 
