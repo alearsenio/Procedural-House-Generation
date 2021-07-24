@@ -25,11 +25,38 @@ void Building::GenerateFloorPlan()
 	if (Rooms.size() > 0)
 	{
 		//position the first room
-		PositionRoom(*Rooms[0], 4, 4, 5, 4, Up, Left);
-		Block randomBlock = *EmptyConnectectBlocks[rand() % EmptyConnectectBlocks.size()];
-		PositionRoom(*Rooms[1], randomBlock.PosX, randomBlock.PosY, 5, 5, randomBlock.BuildDirection, Right);
-		randomBlock = *EmptyConnectectBlocks[rand() % EmptyConnectectBlocks.size()];
-		PositionRoom(*Rooms[2], randomBlock.PosX, randomBlock.PosY, 6, 4, randomBlock.BuildDirection, Left);
+		PositionRoom(*Rooms[0], 0, 0, 8, 7, Up, Normal);
+		bool positionFound = false;
+		Block randomBlock;
+		for (int i = 0; i<500; i++)
+		{
+			randomBlock = *EmptyConnectectBlocks[rand() % EmptyConnectectBlocks.size()];
+			positionFound = CheckIfSpaceAvaiable(randomBlock.PosX, randomBlock.PosY, 4, 5, randomBlock.NormalDirection, Normal);
+			if (positionFound)
+				break;
+		}
+		positionFound = false;
+		PositionRoom(*Rooms[1], randomBlock.PosX, randomBlock.PosY, 4, 5, randomBlock.NormalDirection, Normal);
+
+		for (int i = 0; i < 500; i++)
+		{
+			randomBlock = *EmptyConnectectBlocks[rand() % EmptyConnectectBlocks.size()];
+			positionFound = CheckIfSpaceAvaiable(randomBlock.PosX, randomBlock.PosY, 6, 4, randomBlock.NormalDirection, Normal);
+			if (positionFound)
+				break;
+		}
+		positionFound = false;
+		PositionRoom(*Rooms[2], randomBlock.PosX, randomBlock.PosY, 6, 4, randomBlock.NormalDirection, Normal);
+
+		for (int i = 0; i < 500; i++)
+		{
+			randomBlock = *EmptyConnectectBlocks[rand() % EmptyConnectectBlocks.size()];
+			positionFound = CheckIfSpaceAvaiable(randomBlock.PosX, randomBlock.PosY, 4, 4, randomBlock.NormalDirection, Normal);
+			if (positionFound)
+				break;
+		}
+		positionFound = false;
+		PositionRoom(*Rooms[3], randomBlock.PosX, randomBlock.PosY, 4, 4, randomBlock.NormalDirection, Normal);
 	}
 }
 
@@ -45,17 +72,31 @@ Room Building::AddRoom(int Area, FString Name, int RoomId)
 }
 
 //position the room inside the grid
-bool Building::PositionRoom(Room currentRoom, int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight, BuildDirection BuildDirectionX, BuildDirection BuildDirectionY)
+bool Building::PositionRoom(Room currentRoom, int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight, NormalDirection NormalBuildDirection, TangentDirection TangentBuildDirection)
 {
-	if (BuildDirectionX == Left)
+	//check normal build direction
+	if (NormalBuildDirection == Left)
 	{
 		StartingPointX -= RoomWidth - 1;
 	}
-	else if (BuildDirectionX == Down)
+	else if (NormalBuildDirection == Down)
 	{
 		StartingPointY -= RoomHeight - 1;
 	}
 
+	//check tangent build direction
+	if (TangentBuildDirection == Inverted)
+	{
+		if (NormalBuildDirection == Left || NormalBuildDirection == Right)
+		{
+			StartingPointY -= RoomHeight - 1;
+		}
+		else if (NormalBuildDirection == Down || NormalBuildDirection == Up)
+		{
+			StartingPointX -= RoomWidth - 1;
+		}
+	}
+	
 	//if there is space, position the room
 	for (int X = StartingPointX; X < StartingPointX + RoomWidth; X++)
 	{
@@ -94,9 +135,44 @@ bool Building::PositionRoom(Room currentRoom, int StartingPointX, int StartingPo
 }
 
 //check if at that starting point it is possible to create a room with that specifications
-bool Building::checkIfSpaceAvaiable(int StartingPointX, int StartingPointY, int width, int height, BuildDirection BuildDirection)
+bool Building::CheckIfSpaceAvaiable(int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight, NormalDirection NormalBuildDirection, TangentDirection TangentBuildDirection)
 {
-	return false;
+	//check normal build direction
+	if (NormalBuildDirection == Left)
+	{
+		StartingPointX -= RoomWidth - 1;
+	}
+	else if (NormalBuildDirection == Down)
+	{
+		StartingPointY -= RoomHeight - 1;
+	}
+
+	//check tangent build direction
+	if (TangentBuildDirection == Inverted)
+	{
+		if (NormalBuildDirection == Left || NormalBuildDirection == Right)
+		{
+			StartingPointY -= RoomHeight - 1;
+		}
+		else if (NormalBuildDirection == Down || NormalBuildDirection == Up)
+		{
+			StartingPointX -= RoomWidth - 1;
+		}
+	}
+
+	//check if every block is free or if is an empty connected block
+	for (int X = StartingPointX; X < StartingPointX + RoomWidth; X++)
+	{
+		for (int Y = StartingPointY; Y < StartingPointY + RoomHeight; Y++)
+		{
+			Block* CurrentBlock = GetBlock(X, Y);
+			if ((CurrentBlock != nullptr && CurrentBlock->BlockType != EmptyConnectedBlock))
+			{
+				return false;
+			}
+		}
+	}
+	return true;
 }
 
 Block* Building::GetBlock(int X, int Y)
@@ -131,8 +207,8 @@ Block* Building::AddBlock(int X, int Y, BlockType BlockType, Room* OwnerRoom)
 //called for every edge block of a room, add a corridors block on the empty block around a specific block
 void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight)
 {
-	BuildDirection BuildDirectionX;
-	BuildDirection BuildDirectionY;
+	NormalDirection BuildDirectionX;
+	NormalDirection BuildDirectionY;
 	for (int i = 1; i <= CorridorWidth + 1; i++)
 	{
 		int NewX = PosX;
@@ -186,7 +262,7 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 			{
 				CurrentBlock = AddBlock(NewX, PosY, EmptyConnectedBlock, nullptr);
 				EmptyConnectectBlocks.push_back(CurrentBlock);
-				CurrentBlock->BuildDirection = BuildDirectionX;
+				CurrentBlock->NormalDirection = BuildDirectionX;
 			}
 		}
 
@@ -214,7 +290,7 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 			{
 				CurrentBlock = AddBlock(PosX, NewY, EmptyConnectedBlock, nullptr);
 				EmptyConnectectBlocks.push_back(CurrentBlock);
-				CurrentBlock->BuildDirection = BuildDirectionY;
+				CurrentBlock->NormalDirection = BuildDirectionY;
 			}
 		}
 	}
@@ -280,9 +356,9 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 					CurrentBlock = AddBlock(NewX, NewY, EmptyConnectedBlock, nullptr);
 					EmptyConnectectBlocks.push_back(CurrentBlock);
 					if (i > j)
-						CurrentBlock->BuildDirection = BuildDirectionX;
+						CurrentBlock->NormalDirection = BuildDirectionX;
 					else
-						CurrentBlock->BuildDirection = BuildDirectionY;
+						CurrentBlock->NormalDirection = BuildDirectionY;
 
 				}
 

@@ -11,7 +11,7 @@ enum BlockType
 	Empty, RoomInternalBlock, RoomEdgeBlock, CorridorBlock, EmptyConnectedBlock
 };
 
-enum BuildDirection
+enum NormalDirection
 {
 	Left, Right, Up, Down
 };
@@ -24,6 +24,6 @@ public:
 	int PosX;
 	int PosY;
 	BlockType BlockType;
-	BuildDirection BuildDirection;
+	NormalDirection NormalDirection;
 	Room* OwnerRoom;
 };

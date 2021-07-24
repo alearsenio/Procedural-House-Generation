@@ -6,6 +6,10 @@
 #include <vector>
 #include "CoreMinimal.h"
 
+enum TangentDirection
+{
+	Normal, Inverted
+};
 
 class PROCEDURALHOUSE_API Building
 {
@@ -15,8 +19,8 @@ public:
 	~Building();
 	
 	Room AddRoom(int Area, FString Name, int RoomId);
-	bool PositionRoom(Room currentRoom, int startingPointX, int StartingPointY, int RoomWidth, int RoomHeight, BuildDirection BuildDirectionX, BuildDirection BuildDirectionY);
-	bool checkIfSpaceAvaiable(int startingPointX, int StartingPointY, int width, int height, BuildDirection BuildDirection);
+	bool PositionRoom(Room currentRoom, int startingPointX, int StartingPointY, int RoomWidth, int RoomHeight, NormalDirection NormalBuildDirection, TangentDirection TangentBuildDirection);
+	bool CheckIfSpaceAvaiable(int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight, NormalDirection NormalBuildDirection, TangentDirection TangentBuildDirection);
 	void GenerateFloorPlan();
 	void CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight);
 	Block* GetBlock(int X, int Y);
