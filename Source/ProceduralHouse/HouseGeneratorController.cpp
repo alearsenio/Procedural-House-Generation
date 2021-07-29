@@ -23,7 +23,7 @@ void UHouseGeneratorController::BeginPlay()
 	FRotator Rotation(0, 0, 0);
 
 	House = Building(1, GridWidht, GridHeight, 1);
-	Room LivingRoom = House.AddRoom(16, TEXT("LivingRoom"), 0);
+	Room LivingRoom = House.AddRoom(124, TEXT("LivingRoom"), 0);
 
 	Room DiningRoom = House.AddRoom(20, TEXT("DiningRoom"), 1);
 	DiningRoom.AddConnectedRoom(&LivingRoom);
@@ -36,7 +36,7 @@ void UHouseGeneratorController::BeginPlay()
 
 
 	House.GenerateFloorPlan();
-	UE_LOG(LogTemp, Warning, TEXT(" %d"), House.HouseBlocks.size());
+	/*UE_LOG(LogTemp, Warning, TEXT(" %d"), House.HouseBlocks.size());
 	for (int i = 0; i < House.Rooms.size(); i++)
 	{
 		for (int j = 0; j < House.Rooms[i]->ConnectedRooms.size(); j++)
@@ -47,7 +47,7 @@ void UHouseGeneratorController::BeginPlay()
 	for (int i = 0; i < House.HouseBlocks.size(); i++)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("%d  %d"), House.HouseBlocks[i]->PosX, House.HouseBlocks[i]->PosY);
-	}
+	}*/
 	SpawnObject(Location, Rotation);
 }
 

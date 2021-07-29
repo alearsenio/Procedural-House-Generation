@@ -15,6 +15,7 @@ enum NormalDirection
 {
 	Left, Right, Up, Down
 };
+
 class PROCEDURALHOUSE_API Block
 {
 public:

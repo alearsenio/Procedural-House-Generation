@@ -24,11 +24,16 @@ void Building::GenerateFloorPlan()
 {
 	if (Rooms.size() > 0)
 	{
+		//define front door untouchable space
+		FrontSpaceLeftEdge = 0;
+		FrontSpaceRightEdge = 7;
+		FrontSpaceTopEdge = 0;
 		//position the first room
-		PositionRoom(*Rooms[0], 0, 0, 8, 7, Up, Normal);
+		PositionRoom(Rooms[0], 0, 0, 8, 7, Up, Normal);
+
 		bool positionFound = false;
 		Block randomBlock;
-		for (int i = 0; i<500; i++)
+		for (int i = 0; i < 500; i++)
 		{
 			randomBlock = *EmptyConnectectBlocks[rand() % EmptyConnectectBlocks.size()];
 			positionFound = CheckIfSpaceAvaiable(randomBlock.PosX, randomBlock.PosY, 4, 5, randomBlock.NormalDirection, Normal);
@@ -36,7 +41,7 @@ void Building::GenerateFloorPlan()
 				break;
 		}
 		positionFound = false;
-		PositionRoom(*Rooms[1], randomBlock.PosX, randomBlock.PosY, 4, 5, randomBlock.NormalDirection, Normal);
+		PositionRoom(Rooms[1], randomBlock.PosX, randomBlock.PosY, 4, 5, randomBlock.NormalDirection, Normal);
 
 		for (int i = 0; i < 500; i++)
 		{
@@ -46,7 +51,7 @@ void Building::GenerateFloorPlan()
 				break;
 		}
 		positionFound = false;
-		PositionRoom(*Rooms[2], randomBlock.PosX, randomBlock.PosY, 6, 4, randomBlock.NormalDirection, Normal);
+		PositionRoom(Rooms[2], randomBlock.PosX, randomBlock.PosY, 6, 4, randomBlock.NormalDirection, Normal);
 
 		for (int i = 0; i < 500; i++)
 		{
@@ -56,10 +61,91 @@ void Building::GenerateFloorPlan()
 				break;
 		}
 		positionFound = false;
-		PositionRoom(*Rooms[3], randomBlock.PosX, randomBlock.PosY, 4, 4, randomBlock.NormalDirection, Normal);
+		PositionRoom(Rooms[3], randomBlock.PosX, randomBlock.PosY, 4, 4, randomBlock.NormalDirection, Normal);
 	}
+
+	EvaluatesBuildPosition(Rooms[0]);
+
 }
 
+BuildCoordinates Building::EvaluatesBuildPosition(Room* CurrentRoom)
+{
+	int Area = CurrentRoom->Area;
+
+	//find possible room's width and height combinations
+	std::vector<RoomWidthHeight>* PossibleAspectRatios = FindPossibleAspectRatios(Area);
+
+	for (int i = 0; i < EmptyConnectectBlocks.size(); i++)
+	{
+		
+	}
+
+	return BuildCoordinates();
+}
+
+std::vector<RoomWidthHeight>* Building::FindPossibleAspectRatios(int Area)
+{
+	std::vector<RoomWidthHeight>* PossibleAspectRatios = new std::vector<RoomWidthHeight>();
+
+	//check if the number its prime, if so increase it by one unit
+	while (CheckIfPrime(Area))
+	{
+		Area++;
+	}
+
+	//check the divisors of the area and take list of all the two numbers which multipled give the area as result, but they are not one greater than double the other
+	//use this list of int couples as possible width and height of the room
+
+	//if there are no good couples as divors, increase the number of one unit and try again
+	while (PossibleAspectRatios->empty())
+	{
+		PossibleAspectRatios->clear();
+		for (int divisor = 2; divisor <= Area / 2; divisor++)
+		{
+
+			if (Area % divisor == 0)
+			{
+				int Width = divisor;
+				int Height = Area / divisor;
+
+				//take the two values only if they are not one greater than double the other
+				if ((Width >= Height && Width < Height * 2) || (Height >= Width && Height < Width * 2))
+				{
+					RoomWidthHeight RoomWidthHeight;
+					RoomWidthHeight.Width = Width;
+					RoomWidthHeight.Height = Height;
+					PossibleAspectRatios->push_back(RoomWidthHeight);
+					UE_LOG(LogTemp, Warning, TEXT("%d  %d  %d"), Width, Height, Area);
+				}
+			}
+		}
+		Area++;
+	}
+	return PossibleAspectRatios;
+}
+
+bool Building::IsInFrontOfFrontDoor(int X, int Y)
+{
+	if (X >= FrontSpaceLeftEdge && X <= FrontSpaceRightEdge && Y <= FrontSpaceTopEdge)
+		return true;
+	else
+		return false;
+}
+
+bool Building::CheckIfPrime(int number)
+{
+	if (number == 0 || number == 1) {
+		return true;
+	}
+	else {
+		for (int i = 2; i <= number / 2; ++i) {
+			if (number % i == 0) {
+				return false;
+			}
+		}
+	}
+	return true;
+}
 //add a room to the rooms list
 Room Building::AddRoom(int Area, FString Name, int RoomId)
 {
@@ -72,7 +158,7 @@ Room Building::AddRoom(int Area, FString Name, int RoomId)
 }
 
 //position the room inside the grid
-bool Building::PositionRoom(Room currentRoom, int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight, NormalDirection NormalBuildDirection, TangentDirection TangentBuildDirection)
+bool Building::PositionRoom(Room* currentRoom, int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight, NormalDirection NormalBuildDirection, TangentDirection TangentBuildDirection)
 {
 	//check normal build direction
 	if (NormalBuildDirection == Left)
@@ -96,7 +182,7 @@ bool Building::PositionRoom(Room currentRoom, int StartingPointX, int StartingPo
 			StartingPointX -= RoomWidth - 1;
 		}
 	}
-	
+
 	//if there is space, position the room
 	for (int X = StartingPointX; X < StartingPointX + RoomWidth; X++)
 	{
@@ -121,12 +207,12 @@ bool Building::PositionRoom(Room currentRoom, int StartingPointX, int StartingPo
 				//add a new block if it doesn't exist or change is blocktype
 				if (CurrentBlock == nullptr)
 				{
-					CurrentBlock = AddBlock(X, Y, BlockType, &currentRoom);
+					CurrentBlock = AddBlock(X, Y, BlockType, currentRoom);
 				}
 				else
 				{
 					CurrentBlock->BlockType = BlockType;
-					CurrentBlock->OwnerRoom = &currentRoom;
+					CurrentBlock->OwnerRoom = currentRoom;
 				}
 			}
 		}
@@ -166,7 +252,7 @@ bool Building::CheckIfSpaceAvaiable(int StartingPointX, int StartingPointY, int 
 		for (int Y = StartingPointY; Y < StartingPointY + RoomHeight; Y++)
 		{
 			Block* CurrentBlock = GetBlock(X, Y);
-			if ((CurrentBlock != nullptr && CurrentBlock->BlockType != EmptyConnectedBlock))
+			if ((CurrentBlock != nullptr && CurrentBlock->BlockType != EmptyConnectedBlock) || IsInFrontOfFrontDoor(X, Y))
 			{
 				return false;
 			}
@@ -204,6 +290,8 @@ Block* Building::AddBlock(int X, int Y, BlockType BlockType, Room* OwnerRoom)
 }
 
 
+
+
 //called for every edge block of a room, add a corridors block on the empty block around a specific block
 void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight)
 {
@@ -238,7 +326,7 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 			BuildDirectionY = Up;
 		}
 
-		if (NewX != PosX)
+		if (NewX != PosX && !IsInFrontOfFrontDoor(NewX, PosY))
 		{
 			//get the free block next to the current room block
 			Block* CurrentBlock = GetBlock(NewX, PosY);
@@ -251,7 +339,7 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 					CurrentBlock->BlockType = CorridorBlock;
 					CurrentBlock->OwnerRoom = nullptr;
 				}
-				else if (CurrentBlock == nullptr)
+				else if (CurrentBlock == nullptr )
 				{
 					CurrentBlock = AddBlock(NewX, PosY, CorridorBlock, nullptr);
 				}
@@ -266,7 +354,7 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 			}
 		}
 
-		if (NewY != PosY)
+		if (NewY != PosY && !IsInFrontOfFrontDoor(PosX, NewY))
 		{
 			//get the free block next to the current room block
 			Block* CurrentBlock = GetBlock(PosX, NewY);
@@ -295,11 +383,11 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 		}
 	}
 
-	//put the corridor blocks on the corner
-	if ((PosX == StartingPointX && PosY == StartingPointY) ||
+	//put the corridor blocks on the corners
+	if (((PosX == StartingPointX && PosY == StartingPointY) ||
 		(PosX == StartingPointX && PosY == StartingPointY + RoomHeight - 1) ||
 		(PosX == StartingPointX + RoomWidth - 1 && PosY == StartingPointY) ||
-		(PosX == StartingPointX + RoomWidth - 1 && PosY == StartingPointY + RoomHeight - 1))
+		(PosX == StartingPointX + RoomWidth - 1 && PosY == StartingPointY + RoomHeight - 1)) && !IsInFrontOfFrontDoor(PosX, PosY))
 	{
 		for (int i = 1; i <= CorridorWidth + 1; i++)
 		{
@@ -335,31 +423,34 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 				//get the free block next to the current room block
 				Block* CurrentBlock = GetBlock(NewX, NewY);
 
-				//if we are still building corridors
-				if (i <= CorridorWidth && j <= CorridorWidth)
-				{
-					//if it exists and it is an EmptyConnectedBlock, we can make it a corridor block
-					if (CurrentBlock != nullptr && CurrentBlock->BlockType == EmptyConnectedBlock)
+				//if we are not in front of the front door facade
+				if (!IsInFrontOfFrontDoor(NewX, NewY)) {
+					//if we are still building corridors
+					if (i <= CorridorWidth && j <= CorridorWidth)
 					{
-						CurrentBlock->BlockType = CorridorBlock;
-						CurrentBlock->OwnerRoom = nullptr;
+						//if it exists and it is an EmptyConnectedBlock, we can make it a corridor block
+						if (CurrentBlock != nullptr && CurrentBlock->BlockType == EmptyConnectedBlock)
+						{
+							CurrentBlock->BlockType = CorridorBlock;
+							CurrentBlock->OwnerRoom = nullptr;
+						}
+						else if (CurrentBlock == nullptr)
+						{
+							CurrentBlock = AddBlock(NewX, NewY, CorridorBlock, nullptr);
+						}
+						//add block to corridor vector
+						CorridorBlocks.push_back(CurrentBlock);
 					}
-					else if (CurrentBlock == nullptr)
+					else if (!(i > CorridorWidth && j > CorridorWidth) && CurrentBlock == nullptr)//if the block is not busy, add a connected block beside the the corridor blocks
 					{
-						CurrentBlock = AddBlock(NewX, NewY, CorridorBlock, nullptr);
-					}
-					//add block to corridor vector
-					CorridorBlocks.push_back(CurrentBlock);
-				}
-				else if (!(i > CorridorWidth && j > CorridorWidth) && CurrentBlock == nullptr)//if the block is not busy, add a connected block beside the the corridor blocks
-				{
-					CurrentBlock = AddBlock(NewX, NewY, EmptyConnectedBlock, nullptr);
-					EmptyConnectectBlocks.push_back(CurrentBlock);
-					if (i > j)
-						CurrentBlock->NormalDirection = BuildDirectionX;
-					else
-						CurrentBlock->NormalDirection = BuildDirectionY;
+						CurrentBlock = AddBlock(NewX, NewY, EmptyConnectedBlock, nullptr);
+						EmptyConnectectBlocks.push_back(CurrentBlock);
+						if (i > j)
+							CurrentBlock->NormalDirection = BuildDirectionX;
+						else
+							CurrentBlock->NormalDirection = BuildDirectionY;
 
+					}
 				}
 
 			}
