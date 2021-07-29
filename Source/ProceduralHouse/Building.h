@@ -26,6 +26,7 @@ struct BuildCoordinates
 	int RoomHeight;
 	NormalDirection NormalBuildDirection;
 	TangentDirection TangentBuildDirection;
+	float score;
 };
 
 
@@ -37,7 +38,7 @@ public:
 	~Building();
 	
 	Room AddRoom(int Area, FString Name, int RoomId);
-	bool PositionRoom(Room* currentRoom, int startingPointX, int StartingPointY, int RoomWidth, int RoomHeight, NormalDirection NormalBuildDirection, TangentDirection TangentBuildDirection);
+	void PositionRoom(bool WithCorridors, Room* currentRoom, BuildCoordinates BuildCoordinates);
 	bool CheckIfSpaceAvaiable(int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight, NormalDirection NormalBuildDirection, TangentDirection TangentBuildDirection);
 	void GenerateFloorPlan();
 	void CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight);
@@ -47,14 +48,21 @@ public:
 	bool CheckIfPrime(int number);
 	std::vector<RoomWidthHeight>* FindPossibleAspectRatios(int Area);
 	bool IsInFrontOfFrontDoor(int X, int Y);
+	void UpdateBuildingCornerBlocks(int PosX, int PosY);
+	float EvaluateBuildCoordinatesScore(BuildCoordinates BuildCoordinates);
 
-	//dimensions of the building
+	//input dimensions of the building
 	int BlockSize = 0;
 	int TerrainWidth = 0;
 	int TerrainHeight = 0;
 	int CorridorWidth = 0;
-	Block* TopRightBlock = nullptr;
-	Block* BottomLeftBlock = nullptr;
+
+	//edge block of the building
+	int MinXValue = 0;
+	int MaxXValue = 0;
+	int MinYValue = 0;
+	int MaxYValue = 0;
+
 	//vector of rooms in the building
 	std::vector<Room*> Rooms;
 	//vector of blocks used to connect the rooms
