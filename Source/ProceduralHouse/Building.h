@@ -20,6 +20,7 @@ struct RoomWidthHeight
 
 struct BuildCoordinates
 {
+	Room* Room;
 	int StartingPointX;
 	int StartingPointY;
 	int RoomWidth;
@@ -50,6 +51,7 @@ public:
 	bool IsInFrontOfFrontDoor(int X, int Y);
 	void UpdateBuildingCornerBlocks(int PosX, int PosY);
 	float EvaluateBuildCoordinatesScore(BuildCoordinates BuildCoordinates);
+	void PositionGhostRoom(BuildCoordinates BuildCoordinates);
 
 	//input dimensions of the building
 	int BlockSize = 0;
@@ -70,7 +72,7 @@ public:
 	//vector of empty connected blocks
 	std::vector<Block*> EmptyConnectectBlocks;
 	//matrix of blocks for the building
-	std::vector<Block*> HouseBlocks;
+	std::vector<Block*> BuildingBlocks;
 
 	//front door space boundaries
 	int FrontSpaceLeftEdge = 0;

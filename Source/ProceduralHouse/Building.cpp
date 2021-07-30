@@ -30,7 +30,7 @@ void Building::GenerateFloorPlan()
 		FrontSpaceRightEdge = 4;
 		FrontSpaceTopEdge = 0;
 		//!!!!!!!!!!!change this part to real front based on the calculated width of the main room
-		
+
 		//position the first room
 		BuildCoordinates BuildCoordinates;
 		BuildCoordinates.StartingPointX = 0;
@@ -39,9 +39,18 @@ void Building::GenerateFloorPlan()
 		BuildCoordinates.RoomHeight = 6;
 		BuildCoordinates.NormalBuildDirection = Up;
 		BuildCoordinates.TangentBuildDirection = Normal;
-		PositionRoom(true,Rooms[0], BuildCoordinates);
-		UE_LOG(LogTemp, Warning, TEXT("bottom level: %d top level: %d, left level: %d right level: %d  "), MinYValue, MaxYValue, MinXValue, MaxXValue);
-		bool positionFound = false;
+		PositionRoom(true, Rooms[0], BuildCoordinates);
+
+		//UE_LOG(LogTemp, Warning, TEXT("bottom level: %d top level: %d, left level: %d right level: %d  "), MinYValue, MaxYValue, MinXValue, MaxXValue);
+		for (int RoomId = 1; RoomId < Rooms.size(); RoomId++)
+		{
+			BuildCoordinates = EvaluatesBuildPosition(Rooms[RoomId]);
+			PositionRoom(true, Rooms[RoomId], BuildCoordinates);
+		}
+		
+
+
+		/*bool positionFound = false;
 		Block randomBlock;
 		for (int i = 0; i < 500; i++)
 		{
@@ -51,8 +60,7 @@ void Building::GenerateFloorPlan()
 				break;
 		}
 		positionFound = false;
-		//PositionRoom(true,Rooms[1], randomBlock.PosX, randomBlock.PosY, 4, 5, randomBlock.NormalDirection, Normal);
-		UE_LOG(LogTemp, Warning, TEXT("bottom level: %d top level: %d, left level: %d right level: %d  "), MinYValue, MaxYValue, MinXValue, MaxXValue);
+		PositionRoom(true,Rooms[1], randomBlock.PosX, randomBlock.PosY, 4, 5, randomBlock.NormalDirection, Normal);
 
 		for (int i = 0; i < 500; i++)
 		{
@@ -62,8 +70,7 @@ void Building::GenerateFloorPlan()
 				break;
 		}
 		positionFound = false;
-		//PositionRoom(true, Rooms[2], randomBlock.PosX, randomBlock.PosY, 6, 4, randomBlock.NormalDirection, Normal);
-		UE_LOG(LogTemp, Warning, TEXT("bottom level: %d top level: %d, left level: %d right level: %d  "), MinYValue, MaxYValue, MinXValue, MaxXValue);
+		PositionRoom(true, Rooms[2], randomBlock.PosX, randomBlock.PosY, 6, 4, randomBlock.NormalDirection, Normal);
 
 		for (int i = 0; i < 500; i++)
 		{
@@ -73,12 +80,10 @@ void Building::GenerateFloorPlan()
 				break;
 		}
 		positionFound = false;
-		//PositionRoom(true, Rooms[3], randomBlock.PosX, randomBlock.PosY, 4, 4, randomBlock.NormalDirection, Normal);
-		UE_LOG(LogTemp, Warning, TEXT("bottom level: %d top level: %d, left level: %d right level: %d  "), MinYValue, MaxYValue, MinXValue, MaxXValue);
+		PositionRoom(true, Rooms[3], randomBlock.PosX, randomBlock.PosY, 4, 4, randomBlock.NormalDirection, Normal);*/
 
 	}
 
-	EvaluatesBuildPosition(Rooms[0]);
 
 }
 
@@ -88,9 +93,11 @@ BuildCoordinates Building::EvaluatesBuildPosition(Room* CurrentRoom)
 
 	//find possible room's width and height combinations
 	std::vector<RoomWidthHeight> PossibleAspectRatios = *FindPossibleAspectRatios(Area);
+
 	UE_LOG(LogTemp, Warning, TEXT("%d  %d  %d"), PossibleAspectRatios[0].Width, PossibleAspectRatios[0].Height, Area);
 
-	
+	std::vector<BuildCoordinates> PossibleBuildConfigurations;
+
 	//for every empty connected block avaiable
 	for (int blockPos = 0; blockPos < EmptyConnectectBlocks.size(); blockPos++)
 	{
@@ -101,9 +108,9 @@ BuildCoordinates Building::EvaluatesBuildPosition(Room* CurrentRoom)
 			TangentDirection TangentDirection = Normal;
 			for (int TangentBuild = 0; TangentBuild <= 1; TangentBuild++)
 			{
-				if (TangentDirection == 1)
+				if (TangentBuild == 1)
 					TangentDirection = Inverted;
-				
+
 				int PosX = EmptyConnectectBlocks[blockPos]->PosX;
 				int PosY = EmptyConnectectBlocks[blockPos]->PosY;
 				int Width = PossibleAspectRatios[AspectRatio].Width;
@@ -113,6 +120,7 @@ BuildCoordinates Building::EvaluatesBuildPosition(Room* CurrentRoom)
 				if (CheckIfSpaceAvaiable(PosX, PosY, Width, Height, EmptyConnectectBlocks[blockPos]->NormalDirection, TangentDirection))
 				{
 					BuildCoordinates BuildCoordinates;
+					BuildCoordinates.Room = CurrentRoom;
 					BuildCoordinates.StartingPointX = EmptyConnectectBlocks[blockPos]->PosX;
 					BuildCoordinates.StartingPointY = EmptyConnectectBlocks[blockPos]->PosY;
 					BuildCoordinates.RoomWidth = PossibleAspectRatios[AspectRatio].Width;
@@ -120,14 +128,96 @@ BuildCoordinates Building::EvaluatesBuildPosition(Room* CurrentRoom)
 					BuildCoordinates.NormalBuildDirection = EmptyConnectectBlocks[blockPos]->NormalDirection;
 					BuildCoordinates.TangentBuildDirection = TangentDirection;
 					BuildCoordinates.score = EvaluateBuildCoordinatesScore(BuildCoordinates);
+					PossibleBuildConfigurations.push_back(BuildCoordinates);
 				}
 			}
 		}
 	}
-
-	return BuildCoordinates();
+	int randomId = rand() % PossibleBuildConfigurations.size();
+	return PossibleBuildConfigurations[randomId];
 }
 
+//evaluate the score of positiong the room with that speficic configuration
+float Building::EvaluateBuildCoordinatesScore(BuildCoordinates BuildCoordinates)
+{
+	//save current building size values
+	int OldMinXValue = MinXValue;
+	int OldMaxXValue = MaxXValue;
+	int OldMinYValue = MinYValue;
+	int OldMaxYValue = MaxYValue;
+
+	//temporary position the room without corridors, updating the building size values
+	PositionGhostRoom(BuildCoordinates);
+
+	//calculate the space used by the building including the empty blocks inside,
+	int AreaUsed = (MaxXValue + 1 - MinXValue) * (MaxYValue + 1 - MinYValue);
+	int BlocksUsed = 0;
+	//calculate the ratio of actual block used in that area
+	for (int i = 0; i < BuildingBlocks.size(); i++)
+	{
+		if (BuildingBlocks[i]->BlockType != EmptyConnectedBlock)
+			BlocksUsed++;
+	}
+	BlocksUsed += BuildCoordinates.Room->Area;
+	float RatioOfSpaceUsed = (float)BlocksUsed / AreaUsed;
+
+	//UE_LOG(LogTemp, Warning, TEXT("blocks used:%d, area blocks: %d, score = %f"), BlocksUsed, AreaUsed, RatioOfSpaceUsed);
+
+	//restore the old room size values
+	MinXValue = OldMinXValue;
+	MaxXValue = OldMaxXValue;
+	MinYValue = OldMinYValue;
+	MaxYValue = OldMaxYValue;
+
+	return RatioOfSpaceUsed;
+}
+
+//position the room only to check if how it changes the edge values of the building
+void Building::PositionGhostRoom(BuildCoordinates BuildCoordinates)
+{
+
+	int StartingPointX = BuildCoordinates.StartingPointX;
+	int StartingPointY = BuildCoordinates.StartingPointY;
+	int RoomWidth = BuildCoordinates.RoomWidth;
+	int RoomHeight = BuildCoordinates.RoomHeight;
+	NormalDirection NormalBuildDirection = BuildCoordinates.NormalBuildDirection;
+	TangentDirection TangentBuildDirection = BuildCoordinates.TangentBuildDirection;
+
+	//check normal build direction
+	if (NormalBuildDirection == Left)
+	{
+		StartingPointX -= RoomWidth - 1;
+	}
+	else if (NormalBuildDirection == Down)
+	{
+		StartingPointY -= RoomHeight - 1;
+	}
+
+	//check tangent build direction
+	if (TangentBuildDirection == Inverted)
+	{
+		if (NormalBuildDirection == Left || NormalBuildDirection == Right)
+		{
+			StartingPointY -= RoomHeight - 1;
+		}
+		else if (NormalBuildDirection == Down || NormalBuildDirection == Up)
+		{
+			StartingPointX -= RoomWidth - 1;
+		}
+	}
+
+	//if there is space, position the room
+	for (int X = StartingPointX; X < StartingPointX + RoomWidth; X++)
+	{
+		for (int Y = StartingPointY; Y < StartingPointY + RoomHeight; Y++)
+		{
+			UpdateBuildingCornerBlocks(X, Y);
+
+		}
+	}
+}
+
+//find the all the possible couples width and height of a specific area
 std::vector<RoomWidthHeight>* Building::FindPossibleAspectRatios(int Area)
 {
 	std::vector<RoomWidthHeight>* PossibleAspectRatios = new std::vector<RoomWidthHeight>();
@@ -168,6 +258,7 @@ std::vector<RoomWidthHeight>* Building::FindPossibleAspectRatios(int Area)
 	return PossibleAspectRatios;
 }
 
+//check if the block at those coordintates is in front of the front door facade
 bool Building::IsInFrontOfFrontDoor(int X, int Y)
 {
 	if (X >= FrontSpaceLeftEdge && X <= FrontSpaceRightEdge && Y <= FrontSpaceTopEdge)
@@ -175,9 +266,7 @@ bool Building::IsInFrontOfFrontDoor(int X, int Y)
 	else
 		return false;
 }
-
-
-
+//check if the number is prime
 bool Building::CheckIfPrime(int number)
 {
 	if (number == 0 || number == 1) {
@@ -192,6 +281,7 @@ bool Building::CheckIfPrime(int number)
 	}
 	return true;
 }
+
 //add a room to the rooms list
 Room Building::AddRoom(int Area, FString Name, int RoomId)
 {
@@ -250,7 +340,7 @@ void Building::PositionRoom(bool WithCorridors, Room* currentRoom, BuildCoordina
 				{
 					BlockType = RoomEdgeBlock;
 					//add corridor blocks around the room for connections
-					if (WithCorridors) 
+					if (WithCorridors)
 					{
 						CreateCorridorBlocks(X, Y, StartingPointX, StartingPointY, RoomWidth, RoomHeight);
 					}
@@ -297,20 +387,6 @@ void Building::UpdateBuildingCornerBlocks(int PosX, int PosY)
 	}
 }
 
-float Building::EvaluateBuildCoordinatesScore(BuildCoordinates BuildCoordinates)
-{
-	int OldMinXValue = MinXValue;
-	int OldMaxXValue = MaxXValue;
-	int OldMinYValue = MinYValue;
-	int OldMaxYValue = MaxYValue;
-
-	//calculate the space used by the building included empty block inside, adding the offet of the vector
-	int SquaredSpaceUsed = (OldMaxXValue + 1 - OldMinXValue) * (OldMaxYValue + 1 - OldMinYValue);
-	UE_LOG(LogTemp, Warning, TEXT("score = %d"), SquaredSpaceUsed);
-
-	return 0.0f;
-}
-
 //check if at that starting point it is possible to create a room with that specifications
 bool Building::CheckIfSpaceAvaiable(int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight, NormalDirection NormalBuildDirection, TangentDirection TangentBuildDirection)
 {
@@ -354,11 +430,11 @@ bool Building::CheckIfSpaceAvaiable(int StartingPointX, int StartingPointY, int 
 
 Block* Building::GetBlock(int X, int Y)
 {
-	for (int i = 0; i < HouseBlocks.size(); i++)
+	for (int i = 0; i < BuildingBlocks.size(); i++)
 	{
 		//the block exist so return false
-		if (HouseBlocks[i]->PosX == X && HouseBlocks[i]->PosY == Y)
-			return HouseBlocks[i];
+		if (BuildingBlocks[i]->PosX == X && BuildingBlocks[i]->PosY == Y)
+			return BuildingBlocks[i];
 	}
 	//the block do not exist so return true
 	return nullptr;
@@ -372,14 +448,13 @@ Block* Building::AddBlock(int X, int Y, BlockType BlockType, Room* OwnerRoom)
 	block->PosY = Y;
 	block->OwnerRoom = OwnerRoom;
 	//add the block to the block list
-	HouseBlocks.push_back(block);
+	BuildingBlocks.push_back(block);
 
 	//add the block to its room if it has one
 	if (OwnerRoom != nullptr)
 		OwnerRoom->RoomBlocks.push_back(block);
 	return block;
 }
-
 
 //called for every edge block of a room, add a corridors block on the empty block around a specific block
 void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight)
@@ -428,9 +503,10 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 					CurrentBlock->BlockType = CorridorBlock;
 					CurrentBlock->OwnerRoom = nullptr;
 				}
-				else if (CurrentBlock == nullptr )
+				else if (CurrentBlock == nullptr)
 				{
 					CurrentBlock = AddBlock(NewX, PosY, CorridorBlock, nullptr);
+					UpdateBuildingCornerBlocks(NewX, PosY);
 				}
 				//add block to corridor vector
 				CorridorBlocks.push_back(CurrentBlock);
@@ -459,6 +535,8 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 				else if (CurrentBlock == nullptr)
 				{
 					CurrentBlock = AddBlock(PosX, NewY, CorridorBlock, nullptr);
+					UpdateBuildingCornerBlocks(PosX, NewY);
+
 				}
 				//add block to corridor vector
 				CorridorBlocks.push_back(CurrentBlock);
@@ -526,6 +604,7 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 						else if (CurrentBlock == nullptr)
 						{
 							CurrentBlock = AddBlock(NewX, NewY, CorridorBlock, nullptr);
+							UpdateBuildingCornerBlocks(NewX, NewY);
 						}
 						//add block to corridor vector
 						CorridorBlocks.push_back(CurrentBlock);
