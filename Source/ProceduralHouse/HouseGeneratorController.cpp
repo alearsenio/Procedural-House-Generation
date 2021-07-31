@@ -25,13 +25,13 @@ void UHouseGeneratorController::BeginPlay()
 	House = Building(1, GridWidht, GridHeight, 1);
 	Room LivingRoom = House.AddRoom(30, TEXT("LivingRoom"), 0);
 
-	Room DiningRoom = House.AddRoom(40, TEXT("DiningRoom"), 1);
+	Room DiningRoom = House.AddRoom(20, TEXT("DiningRoom"), 1);
 	DiningRoom.AddConnectedRoom(&LivingRoom);
 
-	Room BedRoom = House.AddRoom(35, TEXT("BedRoom"), 2);
+	Room BedRoom = House.AddRoom(30, TEXT("BedRoom"), 2);
 	BedRoom.AddConnectedRoom(&LivingRoom);
 
-	Room BathRoom = House.AddRoom(25, TEXT("BathRoom"), 3);
+	Room BathRoom = House.AddRoom(20, TEXT("BathRoom"), 3);
 	BedRoom.AddConnectedRoom(&LivingRoom);
 
 

@@ -13,6 +13,7 @@ Building::Building(int newBlockSize, int newWidth, int newHeight, int newCorrido
 	TerrainWidth = newWidth;
 	TerrainHeight = newHeight;
 	CorridorWidth = newCorridorWidth;
+	//srand(static_cast <unsigned> (time(0)));
 }
 
 Building::~Building()
@@ -93,11 +94,10 @@ BuildCoordinates Building::EvaluatesBuildPosition(Room* CurrentRoom)
 
 	//find possible room's width and height combinations
 	std::vector<RoomWidthHeight> PossibleAspectRatios = *FindPossibleAspectRatios(Area);
-
-	UE_LOG(LogTemp, Warning, TEXT("%d  %d  %d"), PossibleAspectRatios[0].Width, PossibleAspectRatios[0].Height, Area);
-
 	std::vector<BuildCoordinates> PossibleBuildConfigurations;
 
+	float ScoreSum = 0;
+	int NumberOfCombinations = 0;
 	//for every empty connected block avaiable
 	for (int blockPos = 0; blockPos < EmptyConnectectBlocks.size(); blockPos++)
 	{
@@ -128,13 +128,44 @@ BuildCoordinates Building::EvaluatesBuildPosition(Room* CurrentRoom)
 					BuildCoordinates.NormalBuildDirection = EmptyConnectectBlocks[blockPos]->NormalDirection;
 					BuildCoordinates.TangentBuildDirection = TangentDirection;
 					BuildCoordinates.score = EvaluateBuildCoordinatesScore(BuildCoordinates);
+					ScoreSum += BuildCoordinates.score;
+					//UE_LOG(LogTemp, Warning, TEXT("score: %f "), BuildCoordinates.score);
+					NumberOfCombinations ++;
 					PossibleBuildConfigurations.push_back(BuildCoordinates);
 				}
 			}
 		}
 	}
-	int randomId = rand() % PossibleBuildConfigurations.size();
+
+	int randomId = ChooseRandomBestPosition(PossibleBuildConfigurations, ScoreSum, NumberOfCombinations);
+
 	return PossibleBuildConfigurations[randomId];
+}
+
+int Building::ChooseRandomBestPosition(std::vector<BuildCoordinates> &PossibleBuildConfigurations, float ScoreSum, int NumberOfCombinations)
+{
+	//generate a random value between 0 and ScoreSum
+	float RandomNumber = static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / ScoreSum));
+
+	UE_LOG(LogTemp, Warning, TEXT("ScoreSum: %f NumberOfCombinations: %d, random number: %f"), ScoreSum, NumberOfCombinations, RandomNumber);
+
+	float Score = 0;
+	for (int i = 0; i < NumberOfCombinations; i++)
+	{
+		Score = PossibleBuildConfigurations[i].score;
+		if (RandomNumber < Score)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("chosen score: %f "), Score);
+			return i;
+		}
+
+		RandomNumber -= PossibleBuildConfigurations[i].score;
+	}
+
+	int randomIndex = rand() % PossibleBuildConfigurations.size();
+	Score =  PossibleBuildConfigurations[rand() % PossibleBuildConfigurations.size()].score;
+	UE_LOG(LogTemp, Warning, TEXT("chosen score: %f "),Score);
+	return randomIndex;
 }
 
 //evaluate the score of positiong the room with that speficic configuration
@@ -216,6 +247,7 @@ void Building::PositionGhostRoom(BuildCoordinates BuildCoordinates)
 		}
 	}
 }
+
 
 //find the all the possible couples width and height of a specific area
 std::vector<RoomWidthHeight>* Building::FindPossibleAspectRatios(int Area)

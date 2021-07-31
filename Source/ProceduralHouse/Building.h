@@ -5,6 +5,7 @@
 #include "Room.h"
 #include <vector>
 #include "CoreMinimal.h"
+#include <ctime>
 
 enum TangentDirection
 {
@@ -52,7 +53,7 @@ public:
 	void UpdateBuildingCornerBlocks(int PosX, int PosY);
 	float EvaluateBuildCoordinatesScore(BuildCoordinates BuildCoordinates);
 	void PositionGhostRoom(BuildCoordinates BuildCoordinates);
-
+	int ChooseRandomBestPosition(std::vector<BuildCoordinates> &PossibleBuildConfigurations, float ScoreSum, int NumberOfCombinations);
 	//input dimensions of the building
 	int BlockSize = 0;
 	int TerrainWidth = 0;
