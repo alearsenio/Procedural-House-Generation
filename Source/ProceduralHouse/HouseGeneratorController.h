@@ -18,7 +18,9 @@ public:
 	UHouseGeneratorController();
 
 	UPROPERTY(EditAnywhere, Category = "House Componenets")
-	TSubclassOf<AActor> RoomCube;
+	TSubclassOf<AActor> PublicRoomCube;
+	UPROPERTY(EditAnywhere, Category = "House Componenets")
+	TSubclassOf<AActor> PrivateRoomCube;
 	UPROPERTY(EditAnywhere, Category = "House Componenets")
 	TSubclassOf<AActor> CorridorCube;
 	UPROPERTY(EditAnywhere, Category = "House Componenets")

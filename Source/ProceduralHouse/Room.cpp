@@ -11,6 +11,8 @@ Room::~Room()
 {
 }
 
+
+
 bool Room::AddConnectedRoom(Room* ConnectedRoom)
 {
 	for (auto Room : ConnectedRooms)
@@ -23,5 +25,7 @@ bool Room::AddConnectedRoom(Room* ConnectedRoom)
 	}
 	//add room to list of connected rooms
 	ConnectedRooms.push_back(ConnectedRoom);
+	//add this room to the other room to create a connection on both sides
+	ConnectedRoom->AddConnectedRoom(this);
 	return true;
 }

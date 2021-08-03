@@ -8,7 +8,7 @@ class Room;
 
 enum BlockType
 {
-	Empty, RoomInternalBlock, RoomEdgeBlock, CorridorBlock, EmptyConnectedBlock
+	Empty, RoomInternalBlock, RoomEdgeBlock, CorridorBlock, EmptyConnectedBlock, DoorBlock
 };
 
 enum NormalDirection
@@ -24,6 +24,7 @@ public:
 
 	int PosX;
 	int PosY;
+	bool isUsed = false;
 	BlockType BlockType;
 	NormalDirection NormalDirection;
 	Room* OwnerRoom;

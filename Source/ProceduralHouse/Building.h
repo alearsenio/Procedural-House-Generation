@@ -39,9 +39,9 @@ public:
 	Building(int BlockSize, int Width, int Height, int newCorridorWidth);
 	~Building();
 	
-	Room AddRoom(int Area, FString Name, int RoomId);
+	Room AddRoom(int Area, FString Name, int RoomId, RoomType RoomType);
 	void PositionRoom(bool WithCorridors, Room* currentRoom, BuildCoordinates BuildCoordinates);
-	bool CheckIfSpaceAvaiable(int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight, NormalDirection NormalBuildDirection, TangentDirection TangentBuildDirection);
+	bool CheckIfSpaceAvailable(int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight, NormalDirection NormalBuildDirection, TangentDirection TangentBuildDirection);
 	void GenerateFloorPlan();
 	void CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight);
 	Block* GetBlock(int X, int Y);
@@ -54,6 +54,7 @@ public:
 	float EvaluateBuildCoordinatesScore(BuildCoordinates BuildCoordinates);
 	void PositionGhostRoom(BuildCoordinates BuildCoordinates);
 	int ChooseRandomBestPosition(std::vector<BuildCoordinates> &PossibleBuildConfigurations, float ScoreSum, int NumberOfCombinations);
+	int EvaluateDistance(int PosX, int PosY, Room* Room2);
 	//input dimensions of the building
 	int BlockSize = 0;
 	int TerrainWidth = 0;
