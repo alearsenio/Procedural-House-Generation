@@ -8,12 +8,18 @@ class Room;
 
 enum BlockType
 {
-	Empty, RoomInternalBlock, RoomEdgeBlock, CorridorBlock, EmptyConnectedBlock, DoorBlock
+	Empty, RoomInternalBlock, RoomEdgeBlock, CorridorBlock, EmptyConnectedBlock, DoorBlock, ExternalWall
 };
 
 enum NormalDirection
 {
 	Left, Right, Up, Down
+};
+
+struct Position
+{
+	int X;
+	int Y;
 };
 
 class PROCEDURALHOUSE_API Block
@@ -24,8 +30,12 @@ public:
 
 	int PosX;
 	int PosY;
-	bool isUsed = false;
+	bool isCorridorUsed = false;
 	BlockType BlockType;
 	NormalDirection NormalDirection;
 	Room* OwnerRoom;
+	//variables for path finding
+	bool isVisited = false;
+	Block* ParentBlockInPath = nullptr;
 };
+

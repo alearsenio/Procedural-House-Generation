@@ -46,8 +46,8 @@ void UHouseGeneratorController::BeginPlay()
 	Room BathRoom2 = House.AddRoom(45, TEXT("BedRoom2"), 7, Private);
 	BathRoom2.AddConnectedRoom(&PrivateHall);
 
-	/*Room BathRoom = House.AddRoom(30, TEXT("BathRoom"), 6, Private);
-	BathRoom.AddConnectedRoom(&PrivateHall);*/
+	Room BathRoom = House.AddRoom(30, TEXT("BathRoom"), 6, Private);
+	BathRoom.AddConnectedRoom(&PrivateHall);
 
 
 	House.GenerateFloorPlan();
@@ -93,9 +93,12 @@ void UHouseGeneratorController::SpawnObject(FVector Location, FRotator Rotation)
 			}
 			else if (House.BuildingBlocks[i]->BlockType == CorridorBlock)
 			{
-				SpawnActorRef = GetWorld()->SpawnActor<AActor>(CorridorCube, NewLocation, Rotation, SpawnParams);
+				if(House.BuildingBlocks[i]->isCorridorUsed)
+					SpawnActorRef = GetWorld()->SpawnActor<AActor>(ConnectedCube, NewLocation, Rotation, SpawnParams);
+				else
+					SpawnActorRef = GetWorld()->SpawnActor<AActor>(CorridorCube, NewLocation, Rotation, SpawnParams);
 			}
-			else if (House.BuildingBlocks[i]->BlockType == EmptyConnectedBlock)
+			else if (House.BuildingBlocks[i]->BlockType == ExternalWall)
 			{
 				SpawnActorRef = GetWorld()->SpawnActor<AActor>(ConnectedCube, NewLocation, Rotation, SpawnParams);
 				for (int j = 1; j <= 4; j++)

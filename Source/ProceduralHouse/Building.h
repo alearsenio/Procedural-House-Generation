@@ -6,6 +6,7 @@
 #include <vector>
 #include "CoreMinimal.h"
 #include <ctime>
+#include <queue>
 
 enum TangentDirection
 {
@@ -55,6 +56,9 @@ public:
 	void PositionGhostRoom(BuildCoordinates BuildCoordinates);
 	int ChooseRandomBestPosition(std::vector<BuildCoordinates> &PossibleBuildConfigurations, float ScoreSum, int NumberOfCombinations);
 	int EvaluateDistance(int PosX, int PosY, Room* Room2);
+	void RemoveAllEmptyConnectedCubes();
+	void FindPathToConnections(Room* Room);
+	int BFSShortestPathLength(Block* StartingBlock, Room* DestinationRoom);
 	//input dimensions of the building
 	int BlockSize = 0;
 	int TerrainWidth = 0;
@@ -69,10 +73,6 @@ public:
 
 	//vector of rooms in the building
 	std::vector<Room*> Rooms;
-	//vector of blocks used to connect the rooms
-	std::vector<Block*> CorridorBlocks;
-	//vector of empty connected blocks
-	std::vector<Block*> EmptyConnectectBlocks;
 	//matrix of blocks for the building
 	std::vector<Block*> BuildingBlocks;
 

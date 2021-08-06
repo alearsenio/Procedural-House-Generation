@@ -42,8 +42,6 @@ void Building::GenerateFloorPlan()
 		BuildCoordinates.TangentBuildDirection = Normal;
 		PositionRoom(true, Rooms[0], BuildCoordinates);
 
-
-		//UE_LOG(LogTemp, Warning, TEXT("bottom level: %d top level: %d, left level: %d right level: %d  "), MinYValue, MaxYValue, MinXValue, MaxXValue);
 		//position all the public rooms
 		for (int RoomId = 1; RoomId < Rooms.size(); RoomId++)
 		{
@@ -62,6 +60,11 @@ void Building::GenerateFloorPlan()
 				PositionRoom(true, Rooms[RoomId], BuildCoordinates);
 			}
 		}
+
+		//remove all the empty connected cubes in the middle of corridors and transform the other ones into external walls
+		RemoveAllEmptyConnectedCubes();
+
+		BFSShortestPathLength(Rooms[0]->RoomBlocks[0], Rooms[8]);
 	}
 }
 
@@ -76,39 +79,44 @@ BuildCoordinates Building::EvaluatesBuildPosition(Room* CurrentRoom)
 	float ScoreSum = 0;
 	int NumberOfCombinations = 0;
 	//for every empty connected block avaiable
-	for (int blockPos = 0; blockPos < EmptyConnectectBlocks.size(); blockPos++)
+	for (int blockPos = 0; blockPos < BuildingBlocks.size(); blockPos++)
 	{
-		//for every configuration of aspect ratio for that room's area
-		for (int AspectRatio = 0; AspectRatio < PossibleAspectRatios.size(); AspectRatio++)
+		if (BuildingBlocks[blockPos]->BlockType == EmptyConnectedBlock)
 		{
-			//for both direction of building, normal and inverted
-			TangentDirection TangentDirection = Normal;
-			for (int TangentBuild = 0; TangentBuild <= 1; TangentBuild++)
+			Block* EmptyConnectedBlock = BuildingBlocks[blockPos];
+			//for every configuration of aspect ratio for that room's area
+			for (int AspectRatio = 0; AspectRatio < PossibleAspectRatios.size(); AspectRatio++)
 			{
-				if (TangentBuild == 1)
-					TangentDirection = Inverted;
+				//for both direction of building, normal and inverted
+				TangentDirection TangentDirection = Normal;
 
-				int PosX = EmptyConnectectBlocks[blockPos]->PosX;
-				int PosY = EmptyConnectectBlocks[blockPos]->PosY;
-				int Width = PossibleAspectRatios[AspectRatio].Width;
-				int Height = PossibleAspectRatios[AspectRatio].Height;
-
-				//check if its possible to build a room with these specifications
-				if (CheckIfSpaceAvailable(PosX, PosY, Width, Height, EmptyConnectectBlocks[blockPos]->NormalDirection, TangentDirection))
+				for (int TangentBuild = 0; TangentBuild <= 1; TangentBuild++)
 				{
-					BuildCoordinates BuildCoordinates;
-					BuildCoordinates.Room = CurrentRoom;
-					BuildCoordinates.StartingPointX = EmptyConnectectBlocks[blockPos]->PosX;
-					BuildCoordinates.StartingPointY = EmptyConnectectBlocks[blockPos]->PosY;
-					BuildCoordinates.RoomWidth = PossibleAspectRatios[AspectRatio].Width;
-					BuildCoordinates.RoomHeight = PossibleAspectRatios[AspectRatio].Height;
-					BuildCoordinates.NormalBuildDirection = EmptyConnectectBlocks[blockPos]->NormalDirection;
-					BuildCoordinates.TangentBuildDirection = TangentDirection;
-					BuildCoordinates.score = EvaluateBuildCoordinatesScore(BuildCoordinates);
-					ScoreSum += BuildCoordinates.score;
-					//UE_LOG(LogTemp, Warning, TEXT("score: %f "), BuildCoordinates.score);
-					NumberOfCombinations++;
-					PossibleBuildConfigurations.push_back(BuildCoordinates);
+					if (TangentBuild == 1)
+						TangentDirection = Inverted;
+
+					int PosX = EmptyConnectedBlock->PosX;
+					int PosY = EmptyConnectedBlock->PosY;
+					int Width = PossibleAspectRatios[AspectRatio].Width;
+					int Height = PossibleAspectRatios[AspectRatio].Height;
+
+					//check if its possible to build a room with these specifications
+					if (CheckIfSpaceAvailable(PosX, PosY, Width, Height, EmptyConnectedBlock->NormalDirection, TangentDirection))
+					{
+						BuildCoordinates BuildCoordinates;
+						BuildCoordinates.Room = CurrentRoom;
+						BuildCoordinates.StartingPointX = EmptyConnectedBlock->PosX;
+						BuildCoordinates.StartingPointY = EmptyConnectedBlock->PosY;
+						BuildCoordinates.RoomWidth = PossibleAspectRatios[AspectRatio].Width;
+						BuildCoordinates.RoomHeight = PossibleAspectRatios[AspectRatio].Height;
+						BuildCoordinates.NormalBuildDirection = EmptyConnectedBlock->NormalDirection;
+						BuildCoordinates.TangentBuildDirection = TangentDirection;
+						BuildCoordinates.score = EvaluateBuildCoordinatesScore(BuildCoordinates);
+						ScoreSum += BuildCoordinates.score;
+						//UE_LOG(LogTemp, Warning, TEXT("score: %f "), BuildCoordinates.score);
+						NumberOfCombinations++;
+						PossibleBuildConfigurations.push_back(BuildCoordinates);
+					}
 				}
 			}
 		}
@@ -215,20 +223,20 @@ float Building::EvaluateBuildCoordinatesScore(BuildCoordinates BuildCoordinates)
 
 	//UE_LOG(LogTemp, Warning, TEXT("HeightWidthRatio: %f, Score = %f"), HeightWidthRatios, Score);
 
-	////penalise the score the more the house width and height get closer to the terrain boundaries
-	//float widthDifference = 1;
-	//if (BuildingWidth <= TerrainWidth)
-	//	widthDifference = (float)TerrainWidth - BuildingWidth;
-	//else
-	//	widthDifference = TerrainWidth / BuildingWidth;
+	//penalise the score the more the house width and height get closer to the terrain boundaries
+	float widthDifference = 1;
+	if (BuildingWidth <= TerrainWidth)
+		widthDifference = (float)TerrainWidth - BuildingWidth;
+	else
+		widthDifference = TerrainWidth / BuildingWidth;
 
-	//float heightDifference = 1;
-	//if (BuildinghHeight <= TerrainHeight)
-	//	heightDifference = (float)TerrainHeight - BuildinghHeight;
-	//else
-	//	heightDifference = (float)TerrainHeight / BuildinghHeight;
+	float heightDifference = 1;
+	if (BuildinghHeight <= TerrainHeight)
+		heightDifference = (float)TerrainHeight - BuildinghHeight;
+	else
+		heightDifference = (float)TerrainHeight / BuildinghHeight;
 
-	//Score *= widthDifference * heightDifference;
+	Score *= widthDifference * heightDifference;
 	//UE_LOG(LogTemp, Warning, TEXT("widthDifference:%f, heightDifference: %f, Score = %f"), widthDifference, heightDifference, Score);
 
 	//EVALUATE DISTANCE BETWEEN CONNECTED ROOMS
@@ -272,6 +280,121 @@ int Building::EvaluateDistance(int PosX, int PosY, Room* Room2)
 		}
 	}
 	return ShortestDistance;
+}
+
+void Building::RemoveAllEmptyConnectedCubes()
+{
+	BlockType BlockType;
+	int BlockPosX = 0;
+	int BlockPosY = 0;
+	for (int i = 0; i < BuildingBlocks.size(); i++)
+	{
+		if (BuildingBlocks[i]->BlockType == EmptyConnectedBlock)
+		{
+			BlockPosX = BuildingBlocks[i]->PosX;
+			BlockPosY = BuildingBlocks[i]->PosY;
+			int OccupiedNeighboors = 0;
+			if (GetBlock(BlockPosX, BlockPosY - 1))
+				OccupiedNeighboors++;
+			if(GetBlock(BlockPosX, BlockPosY + 1))
+				OccupiedNeighboors++;
+			if(GetBlock(BlockPosX - 1, BlockPosY))
+				OccupiedNeighboors++;
+			if(GetBlock(BlockPosX + 1, BlockPosY))
+				OccupiedNeighboors++;
+			if (OccupiedNeighboors >= 4)
+			{
+				BlockType = CorridorBlock;
+			}
+			else
+			{
+				BlockType = ExternalWall;
+			}
+			BuildingBlocks[i]->BlockType = BlockType;
+		}
+	}
+}
+
+void Building::FindPathToConnections(Room* Room)
+{
+	for (int i = 0; i < Room->RoomBlocks.size(); i++)
+	{
+		if (Room->RoomBlocks[i]->BlockType == RoomEdgeBlock)
+		{
+			for (int j = 0; j < Room->ConnectedRooms.size(); j++)
+			{
+				
+			}
+		}
+	}
+}
+
+int Building::BFSShortestPathLength(Block* StartingBlock, Room* DestinationRoom)
+{
+	//insert the first block into the queue
+	std::queue<Block*> Queue;
+	Queue.push(StartingBlock);
+
+	bool RoomFound = false;
+
+	//analise the queue until there are elements in it and there room is not found yet
+	while (!Queue.empty() && !RoomFound)
+	{
+		Block* VisitingBlock = Queue.front();
+		Queue.pop();
+		UE_LOG(LogTemp, Warning, TEXT("block visited: %d %d "), VisitingBlock->PosX, VisitingBlock->PosY);
+
+		//check condition of destination found immediately 
+
+		for (int i = 0; i < 4; i++)
+		{
+			int BlockPosX = VisitingBlock->PosX;
+			int BlockPosY = VisitingBlock->PosY;
+
+			if (i == 0)
+				BlockPosX++;
+			else if (i == 1)
+				BlockPosX--;
+			else if (i == 2)
+				BlockPosY++;
+			else
+				BlockPosY--;
+
+			Block* NeighbourBlock = GetBlock(BlockPosX, BlockPosY);
+
+			if (NeighbourBlock)
+			{
+
+				if (NeighbourBlock->BlockType == CorridorBlock && !NeighbourBlock->isVisited)
+				{
+					Queue.push(NeighbourBlock);
+					NeighbourBlock->isVisited = true;
+					NeighbourBlock->ParentBlockInPath = VisitingBlock;
+					//NeighbourBlock->isCorridorUsed = true;
+					UE_LOG(LogTemp, Warning, TEXT("corridor block: %d %d "), BlockPosX, BlockPosY);
+					UE_LOG(LogTemp, Warning, TEXT("parent block: %d %d "), VisitingBlock->PosX, VisitingBlock->PosY);
+
+				}
+				else if (NeighbourBlock->BlockType == RoomEdgeBlock && NeighbourBlock->OwnerRoom == DestinationRoom)
+				{
+					RoomFound = true;
+					Block* Block = VisitingBlock;
+					while (Block && Block != StartingBlock)
+					{
+						Block->isCorridorUsed = true;
+						Block = Block->ParentBlockInPath;
+						UE_LOG(LogTemp, Warning, TEXT("block path: %d %d "), Block->PosX, Block->PosY);
+					}
+					//Block->isCorridorUsed = true;
+					break;
+				}
+			}
+
+		}
+		
+
+	}
+	return 0;
 }
 
 //position the room only to check if how it changes the edge values of the building
@@ -622,13 +745,10 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 					CurrentBlock = AddBlock(NewX, PosY, CorridorBlock, nullptr);
 					UpdateBuildingCornerBlocks(NewX, PosY);
 				}
-				//add block to corridor vector
-				CorridorBlocks.push_back(CurrentBlock);
 			}
 			else if (CurrentBlock == nullptr)//if the block is not busy, add a connected block beside the the corridor blocks
 			{
 				CurrentBlock = AddBlock(NewX, PosY, EmptyConnectedBlock, nullptr);
-				EmptyConnectectBlocks.push_back(CurrentBlock);
 				CurrentBlock->NormalDirection = BuildDirectionX;
 			}
 		}
@@ -652,13 +772,10 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 					UpdateBuildingCornerBlocks(PosX, NewY);
 
 				}
-				//add block to corridor vector
-				CorridorBlocks.push_back(CurrentBlock);
 			}
 			else if (CurrentBlock == nullptr)//if the block is not busy, add a connected block beside the the corridor blocks
 			{
 				CurrentBlock = AddBlock(PosX, NewY, EmptyConnectedBlock, nullptr);
-				EmptyConnectectBlocks.push_back(CurrentBlock);
 				CurrentBlock->NormalDirection = BuildDirectionY;
 			}
 		}
@@ -720,13 +837,10 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 							CurrentBlock = AddBlock(NewX, NewY, CorridorBlock, nullptr);
 							UpdateBuildingCornerBlocks(NewX, NewY);
 						}
-						//add block to corridor vector
-						CorridorBlocks.push_back(CurrentBlock);
 					}
 					else if (!(i > CorridorWidth && j > CorridorWidth) && CurrentBlock == nullptr)//if the block is not busy, add a connected block beside the the corridor blocks
 					{
 						CurrentBlock = AddBlock(NewX, NewY, EmptyConnectedBlock, nullptr);
-						EmptyConnectectBlocks.push_back(CurrentBlock);
 						if (i > j)
 							CurrentBlock->NormalDirection = BuildDirectionX;
 						else
