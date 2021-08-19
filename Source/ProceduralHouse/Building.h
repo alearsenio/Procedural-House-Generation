@@ -22,7 +22,7 @@ struct RoomWidthHeight
 
 struct BuildCoordinates
 {
-	Room* Room;
+	Room* Room = nullptr;
 	int StartingPointX;
 	int StartingPointY;
 	int RoomWidth;
@@ -40,8 +40,9 @@ public:
 	Building(int BlockSize, int Width, int Height, int newCorridorWidth);
 	~Building();
 	
-	Room AddRoom(int Area, FString Name, int RoomId, RoomType RoomType);
+	Room AddRoom(int Area, FString Name, int RoomId, RoomType RoomType, Building* Building);
 	void PositionRoom(bool WithCorridors, Room* currentRoom, BuildCoordinates BuildCoordinates);
+	bool AddConnection(Room* Room1, Room* Room2);
 	bool CheckIfSpaceAvailable(int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight, NormalDirection NormalBuildDirection, TangentDirection TangentBuildDirection);
 	void GenerateFloorPlan();
 	void CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight);
@@ -58,13 +59,21 @@ public:
 	int EvaluateDistance(int PosX, int PosY, Room* Room2);
 	void RemoveAllEmptyConnectedCubes();
 	void FindPathToConnections(Room* Room);
-	int BFSShortestPathLength(Block* StartingBlock, Room* DestinationRoom);
+	void BFSShortestPathLength(RoomConnection* Connection);
+	void MarkNeighboursCorridorBlocks(Block* CurrentBlock, std::vector<Block*>* PossiblePath);
+	bool ExpandRoom(Room* Room);
+	bool ExpandInDirection(Room* CurrentRoom, Block* CurrentBlock, NormalDirection Direction, int ExploredBlocks);
+	bool IsCorridorUsedByThisRoom(Block* CorridorBlock, Room* CurrentRoom);
+	bool CheckRoomsConnection(Room* Room1, Room* Room2);
+	bool CheckIfIsOnEdge(Block* Block);
+
 	//input dimensions of the building
 	int BlockSize = 0;
 	int TerrainWidth = 0;
 	int TerrainHeight = 0;
 	int CorridorWidth = 0;
 
+	int CorridorLinesCount = 0;
 	//edge block of the building
 	int MinXValue = 0;
 	int MaxXValue = 0;
@@ -75,6 +84,8 @@ public:
 	std::vector<Room*> Rooms;
 	//matrix of blocks for the building
 	std::vector<Block*> BuildingBlocks;
+	//vector of connections among room in the building
+	std::vector<RoomConnection*> Connections;
 
 	//front door space boundaries
 	int FrontSpaceLeftEdge = 0;

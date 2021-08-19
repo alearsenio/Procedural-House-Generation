@@ -11,21 +11,42 @@ Room::~Room()
 {
 }
 
-
-
-bool Room::AddConnectedRoom(Room* ConnectedRoom)
+void Room::FreeCorridorPath()
 {
-	for (auto Room : ConnectedRooms)
+	for (int i = 0; i < PathBlocks.size(); i++)
 	{
-		if (Room->RoomId == ConnectedRoom->RoomId)
-		{
-			//room already connected
-			return false;
-		}
+		PathBlocks[i]->isCorridorUsed = false;
 	}
-	//add room to list of connected rooms
-	ConnectedRooms.push_back(ConnectedRoom);
-	//add this room to the other room to create a connection on both sides
-	ConnectedRoom->AddConnectedRoom(this);
-	return true;
+	PathBlocks.clear();
+}
+
+
+void Room::MoveRoom(MoveDirection Direction)
+{
+	int Xmovement = 0;
+	int Ymovement = 0;
+
+	switch (Direction)
+	{
+	case MoveLeft:
+		Xmovement--;
+		break;
+	case MoveRight:
+		Xmovement++;
+		break;
+	case MoveUp:
+		Ymovement++;
+		break;
+	case MoveDown:
+		Ymovement--;
+		break;
+	default:
+		break;
+	}
+
+	for (int i = 0; i < RoomBlocks.size(); i++)
+	{
+		RoomBlocks[i]->PosX += Xmovement;
+		RoomBlocks[i]->PosY += Xmovement;
+	}
 }

@@ -62,9 +62,25 @@ void Building::GenerateFloorPlan()
 		}
 
 		//remove all the empty connected cubes in the middle of corridors and transform the other ones into external walls
-		RemoveAllEmptyConnectedCubes();
+		//RemoveAllEmptyConnectedCubes();
+		for (int i = 0; i < Connections.size(); i++)
+			BFSShortestPathLength(Connections[i]);
 
-		BFSShortestPathLength(Rooms[0]->RoomBlocks[0], Rooms[8]);
+		////expand every room if possible
+
+		for (int i = 0; i < Rooms.size(); i++)
+		{
+			ExpandRoom(Rooms[i]);
+		}
+
+		for (int i = 0; i < BuildingBlocks.size(); i++)
+		{
+			if (BuildingBlocks[i]->BlockType == RoomInternalBlock && CheckIfIsOnEdge(BuildingBlocks[i]))
+			{
+				BuildingBlocks[i]->BlockType = RoomEdgeBlock;
+			}
+		}
+
 	}
 }
 
@@ -138,7 +154,7 @@ BuildCoordinates Building::EvaluatesBuildPosition(Room* CurrentRoom)
 			index = i;
 		}
 	}
-	UE_LOG(LogTemp, Warning, TEXT("Chosen Score: %f"), bestScore);
+	//UE_LOG(LogTemp, Warning, TEXT("Chosen Score: %f"), bestScore);
 	return PossibleBuildConfigurations[index];
 	return BuildCoordinates();
 }
@@ -148,7 +164,7 @@ int Building::ChooseRandomBestPosition(std::vector<BuildCoordinates>& PossibleBu
 	//generate a random value between 0 and ScoreSum
 	float RandomNumber = static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / ScoreSum));
 
-	UE_LOG(LogTemp, Warning, TEXT("ScoreSum: %f NumberOfCombinations: %d, random number: %f"), ScoreSum, NumberOfCombinations, RandomNumber);
+	//UE_LOG(LogTemp, Warning, TEXT("ScoreSum: %f NumberOfCombinations: %d, random number: %f"), ScoreSum, NumberOfCombinations, RandomNumber);
 
 	float Score = 0;
 	for (int i = 0; i < NumberOfCombinations; i++)
@@ -156,7 +172,7 @@ int Building::ChooseRandomBestPosition(std::vector<BuildCoordinates>& PossibleBu
 		Score = PossibleBuildConfigurations[i].score;
 		if (RandomNumber < Score)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("chosen score: %f "), Score);
+			//UE_LOG(LogTemp, Warning, TEXT("chosen score: %f "), Score);
 			return i;
 		}
 		RandomNumber -= Score;
@@ -164,7 +180,7 @@ int Building::ChooseRandomBestPosition(std::vector<BuildCoordinates>& PossibleBu
 
 	int randomIndex = rand() % PossibleBuildConfigurations.size();
 	Score = PossibleBuildConfigurations[randomIndex].score;
-	UE_LOG(LogTemp, Warning, TEXT("chosen score: %f "), Score);
+	//UE_LOG(LogTemp, Warning, TEXT("chosen score: %f "), Score);
 	return randomIndex;
 }
 
@@ -241,9 +257,14 @@ float Building::EvaluateBuildCoordinatesScore(BuildCoordinates BuildCoordinates)
 
 	//EVALUATE DISTANCE BETWEEN CONNECTED ROOMS
 	float SumOfDistances = 0;
-	for (int i = 0; i < BuildCoordinates.Room->ConnectedRooms.size(); i++)
+	for (int i = 0; i < BuildCoordinates.Room->RoomConnections.size(); i++)
 	{
-		Room* ConnectedRoom = BuildCoordinates.Room->ConnectedRooms[i];
+		Room* ConnectedRoom;
+		if (BuildCoordinates.Room->RoomConnections[i]->Room1 != BuildCoordinates.Room)
+			ConnectedRoom = BuildCoordinates.Room->RoomConnections[i]->Room1;
+		else
+			ConnectedRoom = BuildCoordinates.Room->RoomConnections[i]->Room2;
+
 		if (ConnectedRoom->IsPositioned)
 		{
 			SumOfDistances += (float)EvaluateDistance(BuildCoordinates.StartingPointX, BuildCoordinates.StartingPointY, ConnectedRoom);
@@ -296,11 +317,11 @@ void Building::RemoveAllEmptyConnectedCubes()
 			int OccupiedNeighboors = 0;
 			if (GetBlock(BlockPosX, BlockPosY - 1))
 				OccupiedNeighboors++;
-			if(GetBlock(BlockPosX, BlockPosY + 1))
+			if (GetBlock(BlockPosX, BlockPosY + 1))
 				OccupiedNeighboors++;
-			if(GetBlock(BlockPosX - 1, BlockPosY))
+			if (GetBlock(BlockPosX - 1, BlockPosY))
 				OccupiedNeighboors++;
-			if(GetBlock(BlockPosX + 1, BlockPosY))
+			if (GetBlock(BlockPosX + 1, BlockPosY))
 				OccupiedNeighboors++;
 			if (OccupiedNeighboors >= 4)
 			{
@@ -317,84 +338,402 @@ void Building::RemoveAllEmptyConnectedCubes()
 
 void Building::FindPathToConnections(Room* Room)
 {
-	for (int i = 0; i < Room->RoomBlocks.size(); i++)
+
+}
+
+void Building::BFSShortestPathLength(RoomConnection* Connection)
+{
+	int MinBlocksUsed = BuildingBlocks.size();
+
+	std::vector<Block*> OptimalPath;
+	std::vector<Block*> AnalisedBlocks;
+
+	Room* Room1 = Connection->Room1;
+	Room* Room2 = Connection->Room2;
+
+	//UE_LOG(LogTemp, Warning, TEXT("connecting %s with %s"), *Room1->Name, *Room2->Name);
+
+	for (int i = 1; i < Room1->RoomBlocks.size(); i++)
 	{
-		if (Room->RoomBlocks[i]->BlockType == RoomEdgeBlock)
+		if (Room1->RoomBlocks[i]->BlockType == RoomEdgeBlock)
 		{
-			for (int j = 0; j < Room->ConnectedRooms.size(); j++)
+
+
+			std::vector<Block*> PossiblePath;
+			//check the blocks which would be used from this starting block to arrive to all the connected rooms
+
+			//insert the first block into the queue
+			std::queue<Block*> Queue;
+			Queue.push(Room1->RoomBlocks[i]);
+			bool RoomFound = false;
+
+			//analise the queue until there are elements in it and there room is not found yet
+			while (!Queue.empty() && !RoomFound)
 			{
-				
+				Block* VisitingBlock = Queue.front();
+				Queue.pop();
+				//check condition of destination found immediately 
+
+				for (int h = 0; h < 4; h++)
+				{
+					int BlockPosX = VisitingBlock->PosX;
+					int BlockPosY = VisitingBlock->PosY;
+
+					if (h == 0)
+						BlockPosX++;
+					else if (h == 1)
+						BlockPosX--;
+					else if (h == 2)
+						BlockPosY++;
+					else
+						BlockPosY--;
+
+					Block* NeighbourBlock = GetBlock(BlockPosX, BlockPosY);
+
+					if (NeighbourBlock)
+					{
+						if (NeighbourBlock->BlockType == CorridorBlock && !NeighbourBlock->isVisited)
+						{
+							Queue.push(NeighbourBlock);
+							NeighbourBlock->isVisited = true;
+							NeighbourBlock->ParentBlockInPath = VisitingBlock;
+							AnalisedBlocks.push_back(NeighbourBlock);
+						}
+						else if (NeighbourBlock->BlockType == RoomEdgeBlock && NeighbourBlock->OwnerRoom == Room2)
+						{
+							RoomFound = true;
+							Connection->AreConnected = true;
+							Block* Block = VisitingBlock;
+							while (Block && Block != Room1->RoomBlocks[i])
+							{
+								PossiblePath.push_back(Block);
+								Block = Block->ParentBlockInPath;
+							}
+							break;
+						}
+					}
+				}
 			}
+			//put back all analised block to unvisited status and put their path parent block to null
+			for (int f = 0; f < AnalisedBlocks.size(); f++)
+			{
+				AnalisedBlocks[f]->isVisited = false;
+				AnalisedBlocks[f]->ParentBlockInPath = nullptr;
+			}
+			//if the current blocks used to arrive to every destinations, are less then the previous trials, update the optimal solution
+			if (PossiblePath.size() < MinBlocksUsed && PossiblePath.size() > 0)
+			{
+
+
+				MinBlocksUsed = PossiblePath.size();
+				OptimalPath = PossiblePath;
+
+			}
+		}
+	}
+	//mark all the corridor blocks as used
+	for (int i = 0; i < OptimalPath.size(); i++)
+	{
+		OptimalPath[i]->isCorridorUsed = true;
+		OptimalPath[i]->ConnectionsUsingBlock.push_back(Connection);
+		MarkNeighboursCorridorBlocks(OptimalPath[i], &OptimalPath);
+		Connection->ConnectionPath = OptimalPath;
+	}
+}
+
+void Building::MarkNeighboursCorridorBlocks(Block* CurrentBlock, std::vector<Block*>* PossiblePath)
+{
+	for (int i = 0; i < 4; i++)
+	{
+		int BlockPosX = CurrentBlock->PosX;
+		int BlockPosY = CurrentBlock->PosY;
+
+		if (i == 0)
+			BlockPosX++;
+		else if (i == 1)
+			BlockPosX--;
+		else if (i == 2)
+			BlockPosY++;
+		else
+			BlockPosY--;
+
+		Block* NeighbourBlock = GetBlock(BlockPosX, BlockPosY);
+		if (NeighbourBlock && NeighbourBlock->CorridorId == CurrentBlock->CorridorId && !NeighbourBlock->isCorridorUsed)
+		{
+			NeighbourBlock->isCorridorUsed = true;
+			PossiblePath->push_back(NeighbourBlock);
+			MarkNeighboursCorridorBlocks(NeighbourBlock, PossiblePath);
 		}
 	}
 }
 
-int Building::BFSShortestPathLength(Block* StartingBlock, Room* DestinationRoom)
+bool Building::ExpandRoom(Room* Room)
 {
-	//insert the first block into the queue
-	std::queue<Block*> Queue;
-	Queue.push(StartingBlock);
-
-	bool RoomFound = false;
-
-	//analise the queue until there are elements in it and there room is not found yet
-	while (!Queue.empty() && !RoomFound)
+	bool IsExpanded = false;
+	int BlocksNumber = Room->RoomBlocks.size();
+	for (int i = 0; i < BlocksNumber; i++)
 	{
-		Block* VisitingBlock = Queue.front();
-		Queue.pop();
-		UE_LOG(LogTemp, Warning, TEXT("block visited: %d %d "), VisitingBlock->PosX, VisitingBlock->PosY);
-
-		//check condition of destination found immediately 
-
-		for (int i = 0; i < 4; i++)
+		if (Room->RoomBlocks[i]->BlockType == RoomEdgeBlock)
 		{
-			int BlockPosX = VisitingBlock->PosX;
-			int BlockPosY = VisitingBlock->PosY;
+			//gahter information for the corner expansion
+			int FreeNeighboursCounter = 0;
+			int CornerBlockPosX = 0;
+			int CornerBlockPosY = 0;
+			NormalDirection FirstDirection;
+			NormalDirection SecondDirection;
 
-			if (i == 0)
-				BlockPosX++;
-			else if (i == 1)
-				BlockPosX--;
-			else if (i == 2)
-				BlockPosY++;
-			else
-				BlockPosY--;
-
-			Block* NeighbourBlock = GetBlock(BlockPosX, BlockPosY);
-
-			if (NeighbourBlock)
+			//check every side of the block to see in which direction it is possible to expand the block
+			Block* CurrentBlock = Room->RoomBlocks[i];
+			bool EndReach = false;
+			for (int j = 0; j < 4; j++)
 			{
+				int BlockPosX = CurrentBlock->PosX;
+				int BlockPosY = CurrentBlock->PosY;
+				NormalDirection Direction;
 
-				if (NeighbourBlock->BlockType == CorridorBlock && !NeighbourBlock->isVisited)
+				switch (j)
 				{
-					Queue.push(NeighbourBlock);
-					NeighbourBlock->isVisited = true;
-					NeighbourBlock->ParentBlockInPath = VisitingBlock;
-					//NeighbourBlock->isCorridorUsed = true;
-					UE_LOG(LogTemp, Warning, TEXT("corridor block: %d %d "), BlockPosX, BlockPosY);
-					UE_LOG(LogTemp, Warning, TEXT("parent block: %d %d "), VisitingBlock->PosX, VisitingBlock->PosY);
-
-				}
-				else if (NeighbourBlock->BlockType == RoomEdgeBlock && NeighbourBlock->OwnerRoom == DestinationRoom)
-				{
-					RoomFound = true;
-					Block* Block = VisitingBlock;
-					while (Block && Block != StartingBlock)
-					{
-						Block->isCorridorUsed = true;
-						Block = Block->ParentBlockInPath;
-						UE_LOG(LogTemp, Warning, TEXT("block path: %d %d "), Block->PosX, Block->PosY);
-					}
-					//Block->isCorridorUsed = true;
+				case 0:
+					BlockPosX--;
+					Direction = Left;
 					break;
+				case 1:
+					BlockPosX++;
+					Direction = Right;
+
+					break;
+				case 2:
+					BlockPosY++;
+					Direction = Up;
+
+					break;
+				case 3:
+					BlockPosY--;
+					Direction = Down;
+					break;
+				default:
+					break;
+				}
+
+				Block* NeighbourBlock = GetBlock(BlockPosX, BlockPosY);
+				if (NeighbourBlock && NeighbourBlock->BlockType == CorridorBlock && (!NeighbourBlock->isCorridorUsed || IsCorridorUsedByThisRoom(NeighbourBlock, Room)))
+				{
+					if (j <= 1)
+					{
+						CornerBlockPosX = BlockPosX - CurrentBlock->PosX;
+					}
+					else
+					{
+						CornerBlockPosY = BlockPosY - CurrentBlock->PosY;
+					}
+					FreeNeighboursCounter++;
+
+					//save direction for expansion of the corner
+					if (FreeNeighboursCounter == 1)
+						FirstDirection = Direction;
+					else
+						SecondDirection = Direction;
+
+					/*NeighbourBlock->BlockType = RoomEdgeBlock;
+					CurrentBlock->BlockType = RoomInternalBlock;
+					NeighbourBlock->OwnerRoom = Room;
+					Room->RoomBlocks.push_back(NeighbourBlock);
+					IsExpanded = true;*/
+					if (ExpandInDirection(Room, NeighbourBlock, Direction, 1))
+					{
+						CurrentBlock->BlockType = RoomInternalBlock;
+					}
 				}
 			}
 
+			if (FreeNeighboursCounter >= 2)
+			{
+				for (int k = 1; k <= CorridorWidth; k++)
+				{
+					Block* NeighbourBlock = GetBlock(CurrentBlock->PosX + CornerBlockPosX * k, CurrentBlock->PosY + CornerBlockPosY * k);
+					if (NeighbourBlock && NeighbourBlock->BlockType == CorridorBlock && (!NeighbourBlock->isCorridorUsed || IsCorridorUsedByThisRoom(NeighbourBlock, Room)))
+					{
+						if (ExpandInDirection(Room, NeighbourBlock, FirstDirection, k))
+						{
+							CurrentBlock->BlockType = RoomInternalBlock;
+						}
+						if (ExpandInDirection(Room, NeighbourBlock, SecondDirection, k))
+						{
+							CurrentBlock->BlockType = RoomInternalBlock;
+						}
+					}
+				}
+			}
 		}
-		
+	}
+	//if the check on the line reach a room door without any path, expand
+	//if it reach a wall, delete
+	return IsExpanded;
+}
+
+bool Building::ExpandInDirection(Room* CurrentRoom, Block* CurrentBlock, NormalDirection Direction, int ExploredBlocks)
+{
+
+	int BlockPosX = CurrentBlock->PosX;
+	int BlockPosY = CurrentBlock->PosY;
+
+	switch (Direction)
+	{
+	case Left:
+		BlockPosX--;
+		break;
+	case Right:
+		BlockPosX++;
+		break;
+	case Up:
+		BlockPosY++;
+		break;
+	case Down:
+		BlockPosY--;
+		break;
+	default:
+		break;
+	}
+
+	Block* NeighbourBlock = GetBlock(BlockPosX, BlockPosY);
+	if (NeighbourBlock)
+	{
+		//if the expansion meet a corridor block which is not used for a path, or it is used by the room exploring, move forward
+		if (NeighbourBlock->BlockType == CorridorBlock && (!NeighbourBlock->isCorridorUsed || IsCorridorUsedByThisRoom(NeighbourBlock, CurrentRoom)))
+		{
+			//explore no deeper than the corridor width
+			if (ExploredBlocks < CorridorWidth)
+			{
+				bool CanExpand = ExpandInDirection(CurrentRoom, NeighbourBlock, Direction, ExploredBlocks + 1);
+
+				if (CanExpand)
+				{
+					CurrentBlock->BlockType = RoomInternalBlock;
+					CurrentRoom->RoomBlocks.push_back(CurrentBlock);
+					CurrentBlock->OwnerRoom = CurrentRoom;
+				}
+				else
+				{
+					//CurrentBlock->isCorridorUsed = true;
+				}
+
+				return CanExpand;
+			}
+			else
+			{
+				CurrentBlock->BlockType = RoomEdgeBlock;
+				CurrentBlock->NormalDirection = Direction;
+				CurrentRoom->RoomBlocks.push_back(CurrentBlock);
+				CurrentBlock->OwnerRoom = CurrentRoom;
+				return true;
+			}
+		}
+		//if the expansion meet a corridor block which is used by a path which is not of this room do nothing
+		else if (NeighbourBlock->BlockType == CorridorBlock && NeighbourBlock->isCorridorUsed)
+		{
+			//CurrentBlock->isCorridorUsed = true;
+			return false;
+		}
+		//if the expansion arrive to the edge of the house without interruption, expand
+		else if (NeighbourBlock->BlockType == RoomEdgeBlock || NeighbourBlock->BlockType == RoomInternalBlock || NeighbourBlock->BlockType == EmptyConnectedBlock)
+		{
+			if (NeighbourBlock->BlockType == RoomEdgeBlock && CheckRoomsConnection(CurrentRoom, NeighbourBlock->OwnerRoom))
+			{
+				CurrentBlock->BlockType = DoorBlock;
+				NeighbourBlock->BlockType = DoorBlock;
+			}
+			else
+			{
+				CurrentBlock->BlockType = RoomEdgeBlock;
+			}
+			CurrentBlock->NormalDirection = Direction;
+			CurrentBlock->OwnerRoom = CurrentRoom;
+			CurrentRoom->RoomBlocks.push_back(CurrentBlock);
+			return true;
+		}
 
 	}
-	return 0;
+	CurrentBlock->BlockType = RoomEdgeBlock;
+	CurrentBlock->OwnerRoom = CurrentRoom;
+	CurrentRoom->RoomBlocks.push_back(CurrentBlock);
+	return true;
+}
+
+bool Building::IsCorridorUsedByThisRoom(Block* CorridorBlock, Room* CurrentRoom)
+{
+	//check if that corridor block is used by this room
+	for (int i = 0; i < CorridorBlock->ConnectionsUsingBlock.size(); i++)
+	{
+		bool ConnectionFound = false;
+		for (int j = 0; j <= CurrentRoom->RoomConnections.size(); j++)
+		{
+			if (CorridorBlock->ConnectionsUsingBlock[i] && CurrentRoom->RoomConnections[j] && CorridorBlock->ConnectionsUsingBlock[i] == CurrentRoom->RoomConnections[j])
+				ConnectionFound = true;
+		}
+
+		if (!ConnectionFound)
+			return false;
+	}
+
+	//UE_LOG(LogTemp, Warning, TEXT("Block %d %d can be erased"), CorridorBlock->PosX, CorridorBlock->PosY);
+	return true;
+}
+
+bool Building::CheckRoomsConnection(Room* Room1, Room* Room2)
+{
+	for (int i = 0; i < Room1->RoomConnections.size(); i++)
+	{
+		if ((Room1->RoomConnections[i]->Room1 == Room2 || Room1->RoomConnections[i]->Room2 == Room2) && !Room1->RoomConnections[i]->HasDoor)
+		{
+			Room1->RoomConnections[i]->HasDoor = true;
+			return true;
+		}
+	}
+	return false;
+}
+
+bool Building::CheckIfIsOnEdge(Block* CurrentBlock)
+{
+	//check every side block to see if one is not one of your room blocks
+	for (int j = 0; j < 4; j++)
+	{
+		int BlockPosX = CurrentBlock->PosX;
+		int BlockPosY = CurrentBlock->PosY;
+		NormalDirection Direction;
+
+		switch (j)
+		{
+		case 0:
+			BlockPosX--;
+			Direction = Left;
+			break;
+		case 1:
+			BlockPosX++;
+			Direction = Right;
+
+			break;
+		case 2:
+			BlockPosY++;
+			Direction = Up;
+
+			break;
+		case 3:
+			BlockPosY--;
+			Direction = Down;
+			break;
+		default:
+			break;
+		}
+
+		Block* NeighbourBlock = GetBlock(BlockPosX, BlockPosY);
+
+		if (!NeighbourBlock || (NeighbourBlock->BlockType != RoomInternalBlock && NeighbourBlock->BlockType != RoomEdgeBlock && NeighbourBlock->BlockType != DoorBlock))
+		{
+			CurrentBlock->NormalDirection = Direction;
+			return true;
+		}
+	}
+	return false;
 }
 
 //position the room only to check if how it changes the edge values of the building
@@ -508,13 +847,14 @@ bool Building::CheckIfPrime(int number)
 }
 
 //add a room to the rooms list
-Room Building::AddRoom(int Area, FString Name, int RoomId, RoomType RoomType)
+Room Building::AddRoom(int Area, FString Name, int RoomId, RoomType RoomType, Building* Building)
 {
 	Room newRoom = Room();
 	newRoom.Area = Area;
 	newRoom.RoomId = RoomId;
 	newRoom.Name = Name;
 	newRoom.RoomType = RoomType;
+	newRoom.OwnerBuilding = Building;
 	Rooms.push_back(&newRoom);
 	return newRoom;
 }
@@ -601,6 +941,26 @@ void Building::PositionRoom(bool WithCorridors, Room* currentRoom, BuildCoordina
 
 	//set the room to positioned
 	currentRoom->IsPositioned = true;
+}
+
+bool Building::AddConnection(Room* Room1, Room* Room2)
+{
+	for (int i = 0; i < Connections.size(); i++)
+	{
+		RoomConnection* Connection = Connections[i];
+		if ((Connection->Room1 == Room1 && Connection->Room2 == Room2) || (Connection->Room1 == Room2 && Connection->Room2 == Room1))
+		{
+			return false;
+		}
+	}
+
+	RoomConnection* Connection = new RoomConnection();
+	Connection->Room1 = Room1;
+	Connection->Room2 = Room2;
+	Room1->RoomConnections.push_back(Connection);
+	Room2->RoomConnections.push_back(Connection);
+	Connections.push_back(Connection);
+	return true;
 }
 
 void Building::UpdateBuildingCornerBlocks(int PosX, int PosY)
@@ -698,6 +1058,8 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 {
 	NormalDirection BuildDirectionX;
 	NormalDirection BuildDirectionY;
+	CorridorLinesCount++;
+
 	for (int i = 1; i <= CorridorWidth + 1; i++)
 	{
 		int NewX = PosX;
@@ -745,6 +1107,8 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 					CurrentBlock = AddBlock(NewX, PosY, CorridorBlock, nullptr);
 					UpdateBuildingCornerBlocks(NewX, PosY);
 				}
+				CurrentBlock->CorridorId = CorridorLinesCount;
+
 			}
 			else if (CurrentBlock == nullptr)//if the block is not busy, add a connected block beside the the corridor blocks
 			{
@@ -772,6 +1136,7 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 					UpdateBuildingCornerBlocks(PosX, NewY);
 
 				}
+				CurrentBlock->CorridorId = CorridorLinesCount;
 			}
 			else if (CurrentBlock == nullptr)//if the block is not busy, add a connected block beside the the corridor blocks
 			{
@@ -779,6 +1144,7 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 				CurrentBlock->NormalDirection = BuildDirectionY;
 			}
 		}
+
 	}
 
 	//put the corridor blocks on the corners
@@ -787,6 +1153,7 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 		(PosX == StartingPointX + RoomWidth - 1 && PosY == StartingPointY) ||
 		(PosX == StartingPointX + RoomWidth - 1 && PosY == StartingPointY + RoomHeight - 1)) && !IsInFrontOfFrontDoor(PosX, PosY))
 	{
+		CorridorLinesCount++;
 		for (int i = 1; i <= CorridorWidth + 1; i++)
 		{
 			for (int j = 1; j <= CorridorWidth + 1; j++)
@@ -837,6 +1204,8 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 							CurrentBlock = AddBlock(NewX, NewY, CorridorBlock, nullptr);
 							UpdateBuildingCornerBlocks(NewX, NewY);
 						}
+						CurrentBlock->CorridorId = CorridorLinesCount;
+
 					}
 					else if (!(i > CorridorWidth && j > CorridorWidth) && CurrentBlock == nullptr)//if the block is not busy, add a connected block beside the the corridor blocks
 					{
@@ -848,7 +1217,6 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 
 					}
 				}
-
 			}
 		}
 	}

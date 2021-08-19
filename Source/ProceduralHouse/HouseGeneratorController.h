@@ -18,13 +18,19 @@ public:
 	UHouseGeneratorController();
 
 	UPROPERTY(EditAnywhere, Category = "House Componenets")
-	TSubclassOf<AActor> PublicRoomCube;
+	TSubclassOf<AActor> PrivateRoomWallMesh;
 	UPROPERTY(EditAnywhere, Category = "House Componenets")
-	TSubclassOf<AActor> PrivateRoomCube;
+	TSubclassOf<AActor> PrivateRoomFloorMesh;
 	UPROPERTY(EditAnywhere, Category = "House Componenets")
-	TSubclassOf<AActor> CorridorCube;
+	TSubclassOf<AActor> PublicRoomWallMesh;
 	UPROPERTY(EditAnywhere, Category = "House Componenets")
-	TSubclassOf<AActor> ConnectedCube;
+	TSubclassOf<AActor> PublicRoomFloorMesh;
+	UPROPERTY(EditAnywhere, Category = "House Componenets")
+	TSubclassOf<AActor> CorridorFloorMesh;
+	UPROPERTY(EditAnywhere, Category = "House Componenets")
+	TSubclassOf<AActor> DoorMesh;
+	UPROPERTY(EditAnywhere, Category = "House Componenets")
+	TSubclassOf<AActor> ExternalWallMesh;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "House Components")
 	int GridWidht = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "House Components")
@@ -41,7 +47,7 @@ public:
 
 private:
 
-	void SpawnObject(FVector Location, FRotator Rotation);
+	void PositionMesh();
 	
 	Building House;
 
