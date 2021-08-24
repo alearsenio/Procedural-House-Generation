@@ -42,6 +42,7 @@ public:
 	
 	Room AddRoom(int Area, FString Name, int RoomId, RoomType RoomType, Building* Building);
 	void PositionRoom(bool WithCorridors, Room* currentRoom, BuildCoordinates BuildCoordinates);
+	void PositionFirstRoom(Room* Room);
 	bool AddConnection(Room* Room1, Room* Room2);
 	bool CheckIfSpaceAvailable(int StartingPointX, int StartingPointY, int RoomWidth, int RoomHeight, NormalDirection NormalBuildDirection, TangentDirection TangentBuildDirection);
 	void GenerateFloorPlan();
@@ -67,6 +68,8 @@ public:
 	bool CheckRoomsConnection(Room* Room1, Room* Room2);
 	bool CheckIfIsOnEdge(Block* Block);
 	void CheckWallsOnEdgeBlock(Block* CurrentBlock);
+	void CheckWallsOnExternalBlock(Block* CurrentBlock);
+	void InserWallsInFrontOfStoop();
 
 	//input dimensions of the building
 	int BlockSize = 0;

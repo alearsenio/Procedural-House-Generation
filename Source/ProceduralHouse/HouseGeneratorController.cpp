@@ -20,7 +20,7 @@ void UHouseGeneratorController::BeginPlay()
 	Super::BeginPlay();
 
 	House = Building(1, GridWidht, GridHeight, 2);
-	Room LivingRoom = House.AddRoom(30, TEXT("LivingRoom"), 0, Public, &House);
+	Room LivingRoom = House.AddRoom(20, TEXT("LivingRoom"), 0, Public, &House);
 
 	Room DiningRoom = House.AddRoom(30, TEXT("DiningRoom"), 1, Public, &House);
 	House.AddConnection(&LivingRoom, &DiningRoom);
@@ -158,33 +158,36 @@ void UHouseGeneratorController::PositionMesh()
 			//if the block belongs to an exernal wall
 			else if (House.BuildingBlocks[i]->BlockType == EmptyConnectedBlock)
 			{
-				int angle = 0;
-				int Xoffset = 0;
-				int Yoffset = 0;
-				switch (House.BuildingBlocks[i]->NormalDirection)
+				for (int j = 0; j < House.BuildingBlocks[i]->WallsDirection.size(); j++)
 				{
-				case Left:
-					angle = -90;
-					Yoffset = 35;
-					break;
-				case Right:
-					angle = 90;
-					Yoffset = -35;
-					break;
-				case Up:
-					angle = 0;
-					Xoffset = -35;
-					break;
-				case Down:
-					angle = 180;
-					Xoffset = +35;
-					break;
-				default:
-					break;
+					int angle = 0;
+					int Xoffset = 0;
+					int Yoffset = 0;
+					switch (House.BuildingBlocks[i]->WallsDirection[j])
+					{
+					case Left:
+						angle = -90;
+						Yoffset = -35;
+						break;
+					case Right:
+						angle = 90;
+						Yoffset = +35;
+						break;
+					case Up:
+						angle = 0;
+						Xoffset = +35;
+						break;
+					case Down:
+						angle = 180;
+						Xoffset = -35;
+						break;
+					default:
+						break;
+					}
+					NewLocation = FVector(House.BuildingBlocks[i]->PosY * 100 + Xoffset, House.BuildingBlocks[i]->PosX * 100 + Yoffset, 20);
+					FRotator NewRotation = FRotator(0, angle, 0);
+					SpawnActorRef = GetWorld()->SpawnActor<AActor>(ExternalWallMesh, NewLocation, NewRotation, SpawnParams);
 				}
-				NewLocation = FVector(House.BuildingBlocks[i]->PosY * 100 + Xoffset, House.BuildingBlocks[i]->PosX * 100 + Yoffset, 20);
-				FRotator NewRotation = FRotator(0, angle, 0);
-				SpawnActorRef = GetWorld()->SpawnActor<AActor>(ExternalWallMesh, NewLocation, NewRotation, SpawnParams);
 			}
 		}
 	}

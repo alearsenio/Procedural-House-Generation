@@ -25,24 +25,11 @@ void Building::GenerateFloorPlan()
 {
 	if (Rooms.size() > 0)
 	{
-		//!!!!!!!!!!!change this part to real front based on the calculated width of the main room
-		//define front door untouchable space 
-		FrontSpaceLeftEdge = 0;
-		FrontSpaceRightEdge = 4;
-		FrontSpaceTopEdge = 0;
-		//!!!!!!!!!!!change this part to real front based on the calculated width of the main room
-
 		//position the first room
-		BuildCoordinates BuildCoordinates;
-		BuildCoordinates.StartingPointX = 0;
-		BuildCoordinates.StartingPointY = 0;
-		BuildCoordinates.RoomWidth = 5;
-		BuildCoordinates.RoomHeight = 6;
-		BuildCoordinates.NormalBuildDirection = Up;
-		BuildCoordinates.TangentBuildDirection = Normal;
-		PositionRoom(true, Rooms[0], BuildCoordinates);
+		PositionFirstRoom(Rooms[0]);
 
 		//position all the public rooms
+		BuildCoordinates BuildCoordinates;
 		for (int RoomId = 1; RoomId < Rooms.size(); RoomId++)
 		{
 			if (Rooms[RoomId]->RoomType == Public)
@@ -82,13 +69,22 @@ void Building::GenerateFloorPlan()
 				BuildingBlocks[i]->BlockType = RoomEdgeBlock;
 			}
 		}
-
-		//determine how many walls an edge block needs to position
+		
+		//determine how many walls every the edge block need to positioned
 		for (int i = 0; i < BuildingBlocks.size(); i++)
 		{
 			if (BuildingBlocks[i]->BlockType == RoomEdgeBlock)
 			{
 				CheckWallsOnEdgeBlock(BuildingBlocks[i]);
+			}
+		}
+
+		//determine how many walls every the external block need to positioned
+		for (int i = 0; i < BuildingBlocks.size(); i++)
+		{
+			if (BuildingBlocks[i]->BlockType == EmptyConnectedBlock)
+			{
+				CheckWallsOnExternalBlock(BuildingBlocks[i]);
 			}
 		}
 
@@ -857,6 +853,52 @@ void Building::CheckWallsOnEdgeBlock(Block* CurrentBlock)
 	}
 }
 
+void Building::CheckWallsOnExternalBlock(Block* CurrentBlock)
+{
+	//check every side block to see if it belongs to a a room or a corridor
+	for (int j = 0; j < 4; j++)
+	{
+		int BlockPosX = CurrentBlock->PosX;
+		int BlockPosY = CurrentBlock->PosY;
+		NormalDirection Direction;
+
+		switch (j)
+		{
+		case 0:
+			BlockPosX--;
+			Direction = Left;
+			break;
+		case 1:
+			BlockPosX++;
+			Direction = Right;
+
+			break;
+		case 2:
+			BlockPosY++;
+			Direction = Up;
+
+			break;
+		case 3:
+			BlockPosY--;
+			Direction = Down;
+			break;
+		default:
+			break;
+		}
+
+		Block* NeighbourBlock = GetBlock(BlockPosX, BlockPosY);
+
+		if (NeighbourBlock && NeighbourBlock->BlockType != EmptyConnectedBlock)
+		{
+			CurrentBlock->WallsDirection.push_back(Direction);
+		}
+	}
+}
+
+void Building::InserWallsInFrontOfStoop()
+{
+}
+
 //position the room only to check if how it changes the edge values of the building
 void Building::PositionGhostRoom(BuildCoordinates BuildCoordinates)
 {
@@ -1064,6 +1106,33 @@ void Building::PositionRoom(bool WithCorridors, Room* currentRoom, BuildCoordina
 
 	//set the room to positioned
 	currentRoom->IsPositioned = true;
+}
+
+void Building::PositionFirstRoom(Room* Room)
+{
+	//position the first room
+	std::vector<RoomWidthHeight> PossibleAspectRatios = *FindPossibleAspectRatios(Room->Area);
+	
+	if (PossibleAspectRatios.size() > 0)
+	{
+		//prepare coordinates for the first room
+		BuildCoordinates BuildCoordinates;
+		BuildCoordinates.StartingPointX = 0;
+		BuildCoordinates.StartingPointY = 0;
+		BuildCoordinates.RoomWidth = PossibleAspectRatios[0].Width;
+		BuildCoordinates.RoomHeight = PossibleAspectRatios[0].Height;
+		BuildCoordinates.NormalBuildDirection = Up;
+		BuildCoordinates.TangentBuildDirection = Normal;
+
+		//define the space for the stoop
+		FrontSpaceLeftEdge = 0;
+		FrontSpaceRightEdge = BuildCoordinates.RoomWidth - 1;
+		FrontSpaceTopEdge = 0;
+
+		PositionRoom(true, Rooms[0], BuildCoordinates);
+
+		
+	}
 }
 
 bool Building::AddConnection(Room* Room1, Room* Room2)
