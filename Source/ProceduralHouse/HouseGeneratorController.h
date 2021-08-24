@@ -28,6 +28,8 @@ public:
 	UPROPERTY(EditAnywhere, Category = "House Componenets")
 	TSubclassOf<AActor> CorridorFloorMesh;
 	UPROPERTY(EditAnywhere, Category = "House Componenets")
+		TSubclassOf<AActor> CorridorUsedFloorMesh;
+	UPROPERTY(EditAnywhere, Category = "House Componenets")
 	TSubclassOf<AActor> DoorMesh;
 	UPROPERTY(EditAnywhere, Category = "House Componenets")
 	TSubclassOf<AActor> ExternalWallMesh;

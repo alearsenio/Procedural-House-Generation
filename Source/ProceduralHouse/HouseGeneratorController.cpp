@@ -22,31 +22,31 @@ void UHouseGeneratorController::BeginPlay()
 	House = Building(1, GridWidht, GridHeight, 2);
 	Room LivingRoom = House.AddRoom(30, TEXT("LivingRoom"), 0, Public, &House);
 
-	Room DiningRoom = House.AddRoom(40, TEXT("DiningRoom"), 1, Public, &House);
+	Room DiningRoom = House.AddRoom(30, TEXT("DiningRoom"), 1, Public, &House);
 	House.AddConnection(&LivingRoom, &DiningRoom);
 
-	Room Kitchen = House.AddRoom(30, TEXT("Kitchen"), 2, Public, &House);
+	Room Kitchen = House.AddRoom(20, TEXT("Kitchen"), 2, Public, &House);
 	House.AddConnection(&Kitchen, &DiningRoom);
 	House.AddConnection(&LivingRoom, &Kitchen);
 
-	Room PrivateHall = House.AddRoom(30, TEXT("PrivateHall"), 3, Private, &House);
+	Room PrivateHall = House.AddRoom(20, TEXT("PrivateHall"), 3, Private, &House);
 	House.AddConnection(&PrivateHall, &LivingRoom);
 
 
 	Room BedRoom1 = House.AddRoom(25, TEXT("BedRoom1"), 4, Private, &House);
-	House.AddConnection(&BedRoom1, &LivingRoom);
+	House.AddConnection(&BedRoom1, &PrivateHall);
 
 
-	/*Room BedRoom2 = House.AddRoom(80, TEXT("BedRoom2"), 5, Private, &House);
+	Room BedRoom2 = House.AddRoom(20, TEXT("BedRoom2"), 5, Private, &House);
 	House.AddConnection(&BedRoom2, &PrivateHall);
 
 
-	Room BathRoom1 = House.AddRoom(20, TEXT("BathRoom1"), 6, Public, &House);
+	Room BathRoom1 = House.AddRoom(10, TEXT("BathRoom1"), 6, Public, &House);
 	House.AddConnection(&BathRoom1, &LivingRoom);
 
 
-	Room BathRoom2 = House.AddRoom(20, TEXT("BedRoom2"), 7, Private, &House);
-	House.AddConnection(&BathRoom2, &BedRoom2);*/
+	Room BathRoom2 = House.AddRoom(10, TEXT("BedRoom2"), 7, Private, &House);
+	House.AddConnection(&BathRoom2, &PrivateHall);
 
 
 	/*Room BathRoom = House.AddRoom(30, TEXT("BathRoom"), 6, Private);
@@ -69,7 +69,7 @@ void UHouseGeneratorController::TickComponent(float DeltaTime, ELevelTick TickTy
 void UHouseGeneratorController::PositionMesh()
 {
 	//check if the mesh are avaiable
-	if (PrivateRoomWallMesh && PrivateRoomFloorMesh && PublicRoomWallMesh && PublicRoomFloorMesh  && CorridorFloorMesh && DoorMesh)
+	if (PrivateRoomWallMesh && PrivateRoomFloorMesh && PublicRoomWallMesh && PublicRoomFloorMesh && CorridorFloorMesh && DoorMesh)
 	{
 		FActorSpawnParameters SpawnParams;
 
@@ -91,24 +91,53 @@ void UHouseGeneratorController::PositionMesh()
 
 				//position the floor tile
 				if (House.BuildingBlocks[i]->OwnerRoom->RoomType == Public)
-					FloorMesh = PrivateRoomFloorMesh;
-				else
 					FloorMesh = PublicRoomFloorMesh;
+				else
+					FloorMesh = PrivateRoomFloorMesh;
 
 				SpawnActorRef = GetWorld()->SpawnActor<AActor>(FloorMesh, NewLocation, Rotation, SpawnParams);
 
 				//position the wall
-				if (House.BuildingBlocks[i]->BlockType == RoomEdgeBlock) 
+				if (House.BuildingBlocks[i]->BlockType == RoomEdgeBlock)
 				{
-					TSubclassOf<AActor> WallMesh;
+					for (int j = 0; j < House.BuildingBlocks[i]->WallsDirection.size(); j++)
+					{
+						TSubclassOf<AActor> WallMesh;
 
-					//position the floor tile
-					if (House.BuildingBlocks[i]->OwnerRoom->RoomType == Public)
-						WallMesh = PrivateRoomWallMesh;
-					else
-						WallMesh = PublicRoomWallMesh;
-					NewLocation = FVector(House.BuildingBlocks[i]->PosY * 100, House.BuildingBlocks[i]->PosX * 100, 20);
-					SpawnActorRef = GetWorld()->SpawnActor<AActor>(WallMesh, NewLocation, Rotation, SpawnParams);
+						//position the floor tile
+						if (House.BuildingBlocks[i]->OwnerRoom->RoomType == Public)
+							WallMesh = PrivateRoomWallMesh;
+						else
+							WallMesh = PublicRoomWallMesh;
+
+						int angle = 0;
+						int Xoffset = 0;
+						int Yoffset = 0;
+						switch (House.BuildingBlocks[i]->WallsDirection[j])
+						{
+						case Left:
+							angle = -90;
+							Yoffset = -35;
+							break;
+						case Right:
+							angle = 90;
+							Yoffset = 35;
+							break;
+						case Up:
+							angle = 0;
+							Xoffset = +35;
+							break;
+						case Down:
+							angle = 180;
+							Xoffset = -35;
+							break;
+						default:
+							break;
+						}
+						NewLocation = FVector(House.BuildingBlocks[i]->PosY * 100 + Xoffset, House.BuildingBlocks[i]->PosX * 100 + Yoffset, 20);
+						FRotator NewRotation = FRotator(0, angle, 0);
+						SpawnActorRef = GetWorld()->SpawnActor<AActor>(WallMesh, NewLocation, NewRotation, SpawnParams);
+					}
 				}
 				else if (House.BuildingBlocks[i]->BlockType == DoorBlock)
 				{
@@ -119,18 +148,43 @@ void UHouseGeneratorController::PositionMesh()
 			//if the block belongs to a corridor
 			else if (House.BuildingBlocks[i]->BlockType == CorridorBlock)
 			{
-				SpawnActorRef = GetWorld()->SpawnActor<AActor>(CorridorFloorMesh, NewLocation, Rotation, SpawnParams);
+				//SpawnActorRef = GetWorld()->SpawnActor<AActor>(CorridorFloorMesh, NewLocation, Rotation, SpawnParams);
 
-				/*if(House.BuildingBlocks[i]->isCorridorUsed)
-					SpawnActorRef = GetWorld()->SpawnActor<AActor>(ConnectedCube, NewLocation, Rotation, SpawnParams);
+				if (House.BuildingBlocks[i]->isCorridorUsed)
+					SpawnActorRef = GetWorld()->SpawnActor<AActor>(CorridorUsedFloorMesh, NewLocation, Rotation, SpawnParams);
 				else
-					SpawnActorRef = GetWorld()->SpawnActor<AActor>(CorridorCube, NewLocation, Rotation, SpawnParams);*/
+					SpawnActorRef = GetWorld()->SpawnActor<AActor>(CorridorFloorMesh, NewLocation, Rotation, SpawnParams);
 			}
 			//if the block belongs to an exernal wall
 			else if (House.BuildingBlocks[i]->BlockType == EmptyConnectedBlock)
 			{
-				NewLocation = FVector(House.BuildingBlocks[i]->PosY * 100, House.BuildingBlocks[i]->PosX * 100, 20);
-				SpawnActorRef = GetWorld()->SpawnActor<AActor>(ExternalWallMesh, NewLocation, Rotation, SpawnParams);
+				int angle = 0;
+				int Xoffset = 0;
+				int Yoffset = 0;
+				switch (House.BuildingBlocks[i]->NormalDirection)
+				{
+				case Left:
+					angle = -90;
+					Yoffset = 35;
+					break;
+				case Right:
+					angle = 90;
+					Yoffset = -35;
+					break;
+				case Up:
+					angle = 0;
+					Xoffset = -35;
+					break;
+				case Down:
+					angle = 180;
+					Xoffset = +35;
+					break;
+				default:
+					break;
+				}
+				NewLocation = FVector(House.BuildingBlocks[i]->PosY * 100 + Xoffset, House.BuildingBlocks[i]->PosX * 100 + Yoffset, 20);
+				FRotator NewRotation = FRotator(0, angle, 0);
+				SpawnActorRef = GetWorld()->SpawnActor<AActor>(ExternalWallMesh, NewLocation, NewRotation, SpawnParams);
 			}
 		}
 	}

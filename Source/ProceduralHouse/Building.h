@@ -66,6 +66,7 @@ public:
 	bool IsCorridorUsedByThisRoom(Block* CorridorBlock, Room* CurrentRoom);
 	bool CheckRoomsConnection(Room* Room1, Room* Room2);
 	bool CheckIfIsOnEdge(Block* Block);
+	void CheckWallsOnEdgeBlock(Block* CurrentBlock);
 
 	//input dimensions of the building
 	int BlockSize = 0;

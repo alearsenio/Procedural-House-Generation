@@ -45,6 +45,7 @@ public:
 	int CorridorId = 0;
 	BlockType BlockType;
 	NormalDirection NormalDirection;
+	std::vector<int> WallsDirection;
 	Room* OwnerRoom;
 	//variables for path finding
 	bool isVisited = false;

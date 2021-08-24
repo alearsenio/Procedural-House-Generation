@@ -63,21 +63,32 @@ void Building::GenerateFloorPlan()
 
 		//remove all the empty connected cubes in the middle of corridors and transform the other ones into external walls
 		//RemoveAllEmptyConnectedCubes();
+		
+		//find the shortest path to connect the rooms in the connections
 		for (int i = 0; i < Connections.size(); i++)
 			BFSShortestPathLength(Connections[i]);
 
 		////expand every room if possible
-
 		for (int i = 0; i < Rooms.size(); i++)
 		{
 			ExpandRoom(Rooms[i]);
 		}
 
+		//add missing edge blocks
 		for (int i = 0; i < BuildingBlocks.size(); i++)
 		{
 			if (BuildingBlocks[i]->BlockType == RoomInternalBlock && CheckIfIsOnEdge(BuildingBlocks[i]))
 			{
 				BuildingBlocks[i]->BlockType = RoomEdgeBlock;
+			}
+		}
+
+		//determine how many walls an edge block needs to position
+		for (int i = 0; i < BuildingBlocks.size(); i++)
+		{
+			if (BuildingBlocks[i]->BlockType == RoomEdgeBlock)
+			{
+				CheckWallsOnEdgeBlock(BuildingBlocks[i]);
 			}
 		}
 
@@ -436,7 +447,7 @@ void Building::BFSShortestPathLength(RoomConnection* Connection)
 	{
 		OptimalPath[i]->isCorridorUsed = true;
 		OptimalPath[i]->ConnectionsUsingBlock.push_back(Connection);
-		MarkNeighboursCorridorBlocks(OptimalPath[i], &OptimalPath);
+		//MarkNeighboursCorridorBlocks(OptimalPath[i], &OptimalPath);
 		Connection->ConnectionPath = OptimalPath;
 	}
 }
@@ -475,13 +486,15 @@ bool Building::ExpandRoom(Room* Room)
 	{
 		if (Room->RoomBlocks[i]->BlockType == RoomEdgeBlock)
 		{
+			//UE_LOG(LogTemp, Warning, TEXT("expand BLOCK pos %d %d"), Room->RoomBlocks[i]->PosX, Room->RoomBlocks[i]->PosY);
+
 			//gahter information for the corner expansion
 			int FreeNeighboursCounter = 0;
 			int CornerBlockPosX = 0;
 			int CornerBlockPosY = 0;
 			NormalDirection FirstDirection;
 			NormalDirection SecondDirection;
-
+			bool OneSideExpanded = false;
 			//check every side of the block to see in which direction it is possible to expand the block
 			Block* CurrentBlock = Room->RoomBlocks[i];
 			bool EndReach = false;
@@ -539,15 +552,37 @@ bool Building::ExpandRoom(Room* Room)
 					NeighbourBlock->OwnerRoom = Room;
 					Room->RoomBlocks.push_back(NeighbourBlock);
 					IsExpanded = true;*/
+					//UE_LOG(LogTemp, Warning, TEXT(" trying expanding BLOCK pos %d %d"), CurrentBlock->PosX, CurrentBlock->PosY);
 					if (ExpandInDirection(Room, NeighbourBlock, Direction, 1))
 					{
+						OneSideExpanded = true;
 						CurrentBlock->BlockType = RoomInternalBlock;
 					}
 				}
+				else if (NeighbourBlock && NeighbourBlock->OwnerRoom != Room)
+				{
+					if (j <= 1)
+					{
+						CornerBlockPosX = BlockPosX - CurrentBlock->PosX;
+					}
+					else
+					{
+						CornerBlockPosY = BlockPosY - CurrentBlock->PosY;
+					}
+					FreeNeighboursCounter++;
+					//save direction for expansion of the corner
+					if (FreeNeighboursCounter == 1)
+						FirstDirection = Direction;
+					else
+						SecondDirection = Direction;
+				}
+				//else
+					//UE_LOG(LogTemp, Warning, TEXT(" can't expand BLOCK pos %d %d"), CurrentBlock->PosX, CurrentBlock->PosY);
 			}
-
-			if (FreeNeighboursCounter >= 2)
+			//if you are a corner and a least one side managed to exand, try to expand diagonally
+			if (FreeNeighboursCounter >= 2 && OneSideExpanded)
 			{
+				//UE_LOG(LogTemp, Warning, TEXT("expanding corner pos %d %d"), CurrentBlock->PosX + CornerBlockPosX, CurrentBlock->PosY + CornerBlockPosY);
 				for (int k = 1; k <= CorridorWidth; k++)
 				{
 					Block* NeighbourBlock = GetBlock(CurrentBlock->PosX + CornerBlockPosX * k, CurrentBlock->PosY + CornerBlockPosY * k);
@@ -561,6 +596,10 @@ bool Building::ExpandRoom(Room* Room)
 						{
 							CurrentBlock->BlockType = RoomInternalBlock;
 						}
+					}
+					else
+					{
+						break;
 					}
 				}
 			}
@@ -637,7 +676,7 @@ bool Building::ExpandInDirection(Room* CurrentRoom, Block* CurrentBlock, NormalD
 		//if the expansion arrive to the edge of the house without interruption, expand
 		else if (NeighbourBlock->BlockType == RoomEdgeBlock || NeighbourBlock->BlockType == RoomInternalBlock || NeighbourBlock->BlockType == EmptyConnectedBlock)
 		{
-			if (NeighbourBlock->BlockType == RoomEdgeBlock && CheckRoomsConnection(CurrentRoom, NeighbourBlock->OwnerRoom))
+			/*if (NeighbourBlock->BlockType == RoomEdgeBlock && CheckRoomsConnection(CurrentRoom, NeighbourBlock->OwnerRoom))
 			{
 				CurrentBlock->BlockType = DoorBlock;
 				NeighbourBlock->BlockType = DoorBlock;
@@ -645,7 +684,9 @@ bool Building::ExpandInDirection(Room* CurrentRoom, Block* CurrentBlock, NormalD
 			else
 			{
 				CurrentBlock->BlockType = RoomEdgeBlock;
-			}
+			}*/
+			CurrentBlock->BlockType = RoomEdgeBlock;
+
 			CurrentBlock->NormalDirection = Direction;
 			CurrentBlock->OwnerRoom = CurrentRoom;
 			CurrentRoom->RoomBlocks.push_back(CurrentBlock);
@@ -727,13 +768,93 @@ bool Building::CheckIfIsOnEdge(Block* CurrentBlock)
 
 		Block* NeighbourBlock = GetBlock(BlockPosX, BlockPosY);
 
-		if (!NeighbourBlock || (NeighbourBlock->BlockType != RoomInternalBlock && NeighbourBlock->BlockType != RoomEdgeBlock && NeighbourBlock->BlockType != DoorBlock))
+		if (!NeighbourBlock || (!NeighbourBlock->OwnerRoom || NeighbourBlock->OwnerRoom != CurrentBlock->OwnerRoom))
 		{
 			CurrentBlock->NormalDirection = Direction;
 			return true;
 		}
 	}
+	//check every corner block to see if one is not one of your room blocks
+	/*for (int j = 0; j < 4; j++)
+	{
+		int BlockPosX = CurrentBlock->PosX;
+		int BlockPosY = CurrentBlock->PosY;
+		NormalDirection Direction;
+		switch (j)
+		{
+		case 0:
+			BlockPosX--;
+			BlockPosY--;
+			Direction = Left;
+			break;
+		case 1:
+			BlockPosX++;
+			BlockPosY++;
+			Direction = Right;
+			break;
+		case 2:
+			BlockPosX--;
+			BlockPosY++;
+			Direction = Up;
+			break;
+		case 3:
+			BlockPosX++;
+			BlockPosY--;
+			Direction = Down;
+			break;
+		default:
+			break;
+		}
+		Block* NeighbourBlock = GetBlock(BlockPosX, BlockPosY);
+		if (!NeighbourBlock || (!NeighbourBlock->OwnerRoom || NeighbourBlock->OwnerRoom != CurrentBlock->OwnerRoom))
+		{
+			CurrentBlock->NormalDirection = Direction;
+			return true;
+		}
+	}*/
 	return false;
+}
+
+void Building::CheckWallsOnEdgeBlock(Block* CurrentBlock)
+{
+	//check every side block to see if one is not one of your room blocks
+	for (int j = 0; j < 4; j++)
+	{
+		int BlockPosX = CurrentBlock->PosX;
+		int BlockPosY = CurrentBlock->PosY;
+		NormalDirection Direction;
+
+		switch (j)
+		{
+		case 0:
+			BlockPosX--;
+			Direction = Left;
+			break;
+		case 1:
+			BlockPosX++;
+			Direction = Right;
+
+			break;
+		case 2:
+			BlockPosY++;
+			Direction = Up;
+
+			break;
+		case 3:
+			BlockPosY--;
+			Direction = Down;
+			break;
+		default:
+			break;
+		}
+
+		Block* NeighbourBlock = GetBlock(BlockPosX, BlockPosY);
+
+		if (!NeighbourBlock || (!NeighbourBlock->OwnerRoom || NeighbourBlock->OwnerRoom != CurrentBlock->OwnerRoom))
+		{
+			CurrentBlock->WallsDirection.push_back(Direction);
+		}
+	}
 }
 
 //position the room only to check if how it changes the edge values of the building
@@ -903,6 +1024,7 @@ void Building::PositionRoom(bool WithCorridors, Room* currentRoom, BuildCoordina
 			//if the block we are placing is on the edge
 			if (X == StartingPointX || X == StartingPointX + RoomWidth - 1 || Y == StartingPointY || Y == StartingPointY + RoomHeight - 1)
 			{
+				//UE_LOG(LogTemp, Warning, TEXT("edge BLOCK pos %d %d"), X, Y);
 				BlockType = RoomEdgeBlock;
 				//add corridor blocks around the room for connections
 				if (WithCorridors)
@@ -924,6 +1046,7 @@ void Building::PositionRoom(bool WithCorridors, Room* currentRoom, BuildCoordina
 			{
 				CurrentBlock->BlockType = BlockType;
 				CurrentBlock->OwnerRoom = currentRoom;
+				currentRoom->RoomBlocks.push_back(CurrentBlock);
 			}
 			UpdateBuildingCornerBlocks(X, Y);
 		}
