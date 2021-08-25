@@ -105,6 +105,8 @@ void UHouseGeneratorController::PositionMesh()
 	//check if the mesh are avaiable
 	if (PrivateRoomWallMesh && PrivateRoomFloorMesh && PublicRoomWallMesh && PublicRoomFloorMesh && CorridorFloorMesh && DoorMesh)
 	{
+		float WallOffset = ModulesWidth / 2 - WallsThickness / 2;
+
 		FActorSpawnParameters SpawnParams;
 
 		FVector Location(0, 0, 0);
@@ -116,7 +118,7 @@ void UHouseGeneratorController::PositionMesh()
 		//go on every block of the floor plan
 		for (int i = 0; i < House.BuildingBlocks.size(); i++)
 		{
-			NewLocation = FVector(House.BuildingBlocks[i]->PosY * 100, House.BuildingBlocks[i]->PosX * 100, 0);
+			NewLocation = FVector(House.BuildingBlocks[i]->PosY * ModulesWidth, House.BuildingBlocks[i]->PosX * ModulesWidth, 0);
 
 			//if the block belongs to a room
 			if (House.BuildingBlocks[i]->BlockType == RoomInternalBlock || House.BuildingBlocks[i]->BlockType == RoomEdgeBlock || House.BuildingBlocks[i]->BlockType == DoorBlock)
@@ -151,24 +153,24 @@ void UHouseGeneratorController::PositionMesh()
 						{
 						case Left:
 							angle = -90;
-							Yoffset = -35;
+							Yoffset = -WallOffset;
 							break;
 						case Right:
 							angle = 90;
-							Yoffset = 35;
+							Yoffset = WallOffset;
 							break;
 						case Up:
 							angle = 0;
-							Xoffset = +35;
+							Xoffset = +WallOffset;
 							break;
 						case Down:
 							angle = 180;
-							Xoffset = -35;
+							Xoffset = -WallOffset;
 							break;
 						default:
 							break;
 						}
-						NewLocation = FVector(House.BuildingBlocks[i]->PosY * 100 + Xoffset, House.BuildingBlocks[i]->PosX * 100 + Yoffset, 20);
+						NewLocation = FVector(House.BuildingBlocks[i]->PosY * ModulesWidth + Xoffset, House.BuildingBlocks[i]->PosX * ModulesWidth + Yoffset, 20);
 						FRotator NewRotation = FRotator(0, angle, 0);
 						SpawnActorRef = GetWorld()->SpawnActor<AActor>(WallMesh, NewLocation, NewRotation, SpawnParams);
 					}
@@ -201,24 +203,24 @@ void UHouseGeneratorController::PositionMesh()
 					{
 					case Left:
 						angle = -90;
-						Yoffset = -35;
+						Yoffset = -WallOffset;
 						break;
 					case Right:
 						angle = 90;
-						Yoffset = +35;
+						Yoffset = +WallOffset;
 						break;
 					case Up:
 						angle = 0;
-						Xoffset = +35;
+						Xoffset = +WallOffset;
 						break;
 					case Down:
 						angle = 180;
-						Xoffset = -35;
+						Xoffset = -WallOffset;
 						break;
 					default:
 						break;
 					}
-					NewLocation = FVector(House.BuildingBlocks[i]->PosY * 100 + Xoffset, House.BuildingBlocks[i]->PosX * 100 + Yoffset, 20);
+					NewLocation = FVector(House.BuildingBlocks[i]->PosY * ModulesWidth + Xoffset, House.BuildingBlocks[i]->PosX * ModulesWidth + Yoffset, 20);
 					FRotator NewRotation = FRotator(0, angle, 0);
 					SpawnActorRef = GetWorld()->SpawnActor<AActor>(ExternalWallMesh, NewLocation, NewRotation, SpawnParams);
 				}

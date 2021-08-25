@@ -67,6 +67,10 @@ public:
 	TSubclassOf<AActor> DoorMesh;
 	UPROPERTY(EditAnywhere, Category = "House Componenets")
 	TSubclassOf<AActor> ExternalWallMesh;
+	UPROPERTY(EditAnywhere, Category = "House Componenets")
+	float ModulesWidth;
+	UPROPERTY(EditAnywhere, Category = "House Componenets")
+	float WallsThickness;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "House Contraints")
 	int GridWidht = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "House Contraints")
