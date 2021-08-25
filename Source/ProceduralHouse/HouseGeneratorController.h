@@ -6,7 +6,41 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "HouseGeneratorController.generated.h"
+ 
+USTRUCT(BlueprintType, DisplayName = "Room Specs")
+struct FRoom
+{
+	GENERATED_BODY()
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int Area;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString Name;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool IsPrivate;
 
+	FRoom()
+	{
+		Area = 10;
+		Name = "Room";
+		IsPrivate = false;
+	}
+};
+
+USTRUCT(BlueprintType, DisplayName = "Connection")
+struct FConnection
+{
+	GENERATED_BODY()
+		UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int FirstRoomId;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int SecondRoomId;
+
+	FConnection()
+	{
+		FirstRoomId = 0;
+		SecondRoomId = 0;
+	}
+};
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class PROCEDURALHOUSE_API UHouseGeneratorController : public UActorComponent
@@ -33,10 +67,16 @@ public:
 	TSubclassOf<AActor> DoorMesh;
 	UPROPERTY(EditAnywhere, Category = "House Componenets")
 	TSubclassOf<AActor> ExternalWallMesh;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "House Components")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "House Contraints")
 	int GridWidht = 0;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "House Components")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "House Contraints")
 	int GridHeight = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "House Contraints")
+	int CorridorWidth = 1;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "House Contraints")
+	TArray<FRoom> Rooms;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "House Contraints")
+	TArray<FConnection> RoomsConnections;
 
 protected:
 	// Called when the game starts

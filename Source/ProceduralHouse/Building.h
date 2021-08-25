@@ -40,7 +40,7 @@ public:
 	Building(int BlockSize, int Width, int Height, int newCorridorWidth);
 	~Building();
 	
-	Room AddRoom(int Area, FString Name, int RoomId, RoomType RoomType, Building* Building);
+	Room* AddRoom(int Area, FString Name, int RoomId, RoomType RoomType, Building* Building);
 	void PositionRoom(bool WithCorridors, Room* currentRoom, BuildCoordinates BuildCoordinates);
 	void PositionFirstRoom(Room* Room);
 	bool AddConnection(Room* Room1, Room* Room2);

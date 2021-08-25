@@ -19,6 +19,40 @@ void UHouseGeneratorController::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (Rooms.Max() > 0) {
+
+		House = Building(1, GridWidht, GridHeight, CorridorWidth);
+		std::vector<Room*> BuildingRooms;
+		for (int i = 0; i < Rooms.Max(); i++)
+		{
+			RoomType RoomType;
+			if (Rooms[i].IsPrivate)
+				RoomType = Private;
+			else
+				RoomType = Public;
+
+			BuildingRooms.push_back(House.AddRoom(Rooms[i].Area, Rooms[i].Name, i, RoomType, &House));
+		}
+		//House.AddConnection(&BuildingRooms[0], &BuildingRooms[1]);
+		for (int i = 0; i < RoomsConnections.Max(); i++)
+		{
+			Room* FirstRoom;
+			Room* SecondRoom;
+
+			if (RoomsConnections[i].FirstRoomId < BuildingRooms.size())
+				FirstRoom = BuildingRooms[RoomsConnections[i].FirstRoomId];
+			else
+				FirstRoom = BuildingRooms[0];
+
+			if (RoomsConnections[i].SecondRoomId < BuildingRooms.size())
+				SecondRoom = BuildingRooms[RoomsConnections[i].SecondRoomId];
+			else
+				SecondRoom = BuildingRooms[1];
+
+			House.AddConnection(FirstRoom, SecondRoom);
+		}
+	}
+	/*
 	House = Building(1, GridWidht, GridHeight, 2);
 	Room LivingRoom = House.AddRoom(20, TEXT("LivingRoom"), 0, Public, &House);
 
@@ -29,7 +63,7 @@ void UHouseGeneratorController::BeginPlay()
 	House.AddConnection(&Kitchen, &DiningRoom);
 	House.AddConnection(&LivingRoom, &Kitchen);
 
-	Room PrivateHall = House.AddRoom(20, TEXT("PrivateHall"), 3, Private, &House);
+	Room PrivateHall = House.AddRoom(10, TEXT("PrivateHall"), 3, Private, &House);
 	House.AddConnection(&PrivateHall, &LivingRoom);
 
 
@@ -46,7 +80,7 @@ void UHouseGeneratorController::BeginPlay()
 
 
 	Room BathRoom2 = House.AddRoom(10, TEXT("BedRoom2"), 7, Private, &House);
-	House.AddConnection(&BathRoom2, &PrivateHall);
+	House.AddConnection(&BathRoom2, &PrivateHall);*/
 
 
 	/*Room BathRoom = House.AddRoom(30, TEXT("BathRoom"), 6, Private);

@@ -55,7 +55,13 @@ void Building::GenerateFloorPlan()
 		for (int i = 0; i < Connections.size(); i++)
 			BFSShortestPathLength(Connections[i]);
 
-		////expand every room if possible
+		//expand every room if possible
+		for (int i = 0; i < Rooms.size(); i++)
+		{
+			ExpandRoom(Rooms[i]);
+		}
+
+		//second expansion to cover eventaul remaining spaces
 		for (int i = 0; i < Rooms.size(); i++)
 		{
 			ExpandRoom(Rooms[i]);
@@ -702,7 +708,7 @@ bool Building::IsCorridorUsedByThisRoom(Block* CorridorBlock, Room* CurrentRoom)
 	for (int i = 0; i < CorridorBlock->ConnectionsUsingBlock.size(); i++)
 	{
 		bool ConnectionFound = false;
-		for (int j = 0; j <= CurrentRoom->RoomConnections.size(); j++)
+		for (int j = 0; j < CurrentRoom->RoomConnections.size(); j++)
 		{
 			if (CorridorBlock->ConnectionsUsingBlock[i] && CurrentRoom->RoomConnections[j] && CorridorBlock->ConnectionsUsingBlock[i] == CurrentRoom->RoomConnections[j])
 				ConnectionFound = true;
@@ -770,44 +776,6 @@ bool Building::CheckIfIsOnEdge(Block* CurrentBlock)
 			return true;
 		}
 	}
-	//check every corner block to see if one is not one of your room blocks
-	/*for (int j = 0; j < 4; j++)
-	{
-		int BlockPosX = CurrentBlock->PosX;
-		int BlockPosY = CurrentBlock->PosY;
-		NormalDirection Direction;
-		switch (j)
-		{
-		case 0:
-			BlockPosX--;
-			BlockPosY--;
-			Direction = Left;
-			break;
-		case 1:
-			BlockPosX++;
-			BlockPosY++;
-			Direction = Right;
-			break;
-		case 2:
-			BlockPosX--;
-			BlockPosY++;
-			Direction = Up;
-			break;
-		case 3:
-			BlockPosX++;
-			BlockPosY--;
-			Direction = Down;
-			break;
-		default:
-			break;
-		}
-		Block* NeighbourBlock = GetBlock(BlockPosX, BlockPosY);
-		if (!NeighbourBlock || (!NeighbourBlock->OwnerRoom || NeighbourBlock->OwnerRoom != CurrentBlock->OwnerRoom))
-		{
-			CurrentBlock->NormalDirection = Direction;
-			return true;
-		}
-	}*/
 	return false;
 }
 
@@ -1010,15 +978,15 @@ bool Building::CheckIfPrime(int number)
 }
 
 //add a room to the rooms list
-Room Building::AddRoom(int Area, FString Name, int RoomId, RoomType RoomType, Building* Building)
+Room* Building::AddRoom(int Area, FString Name, int RoomId, RoomType RoomType, Building* Building)
 {
-	Room newRoom = Room();
-	newRoom.Area = Area;
-	newRoom.RoomId = RoomId;
-	newRoom.Name = Name;
-	newRoom.RoomType = RoomType;
-	newRoom.OwnerBuilding = Building;
-	Rooms.push_back(&newRoom);
+	Room* newRoom = new Room();
+	newRoom->Area = Area;
+	newRoom->RoomId = RoomId;
+	newRoom->Name = Name;
+	newRoom->RoomType = RoomType;
+	newRoom->OwnerBuilding = Building;
+	Rooms.push_back(newRoom);
 	return newRoom;
 }
 
