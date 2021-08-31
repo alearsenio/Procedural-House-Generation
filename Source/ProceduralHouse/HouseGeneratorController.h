@@ -4,9 +4,13 @@
 
 #include "Building.h"
 #include "CoreMinimal.h"
+#include <chrono>
 #include "Components/ActorComponent.h"
 #include "HouseGeneratorController.generated.h"
  
+using namespace std::chrono;
+
+
 USTRUCT(BlueprintType, DisplayName = "Room Specs")
 struct FRoom
 {

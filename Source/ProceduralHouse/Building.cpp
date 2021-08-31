@@ -61,11 +61,11 @@ void Building::GenerateFloorPlan()
 			ExpandRoom(Rooms[i]);
 		}
 
-		//second expansion to cover eventaul remaining spaces
-		for (int i = 0; i < Rooms.size(); i++)
-		{
-			ExpandRoom(Rooms[i]);
-		}
+		////second expansion to cover eventaul remaining spaces
+		//for (int i = 0; i < Rooms.size(); i++)
+		//{
+		//	ExpandRoom(Rooms[i]);
+		//}
 
 		//add missing edge blocks
 		for (int i = 0; i < BuildingBlocks.size(); i++)
@@ -865,6 +865,27 @@ void Building::CheckWallsOnExternalBlock(Block* CurrentBlock)
 
 void Building::InserWallsInFrontOfStoop()
 {
+}
+
+float Building::CalcutateRatioSpaceUsed()
+{
+	//calculate the space used by the building including the empty blocks inside
+	float BuildingWidth = (MaxXValue + 1 - MinXValue);
+	float BuildinghHeight = (MaxYValue + 1 - MinYValue);
+	float AreaUsed = BuildingWidth * BuildinghHeight;
+	float BlocksUsed = 0;
+
+	//count actual blocks used in that area
+	for (int i = 0; i < BuildingBlocks.size(); i++)
+	{
+		if (BuildingBlocks[i]->BlockType != EmptyConnectedBlock)
+			BlocksUsed++;
+	}
+
+	//calculate the ratio blocks in area/blocks really used
+	float RatioOfSpaceUsed = BlocksUsed / AreaUsed;
+
+	return RatioOfSpaceUsed;
 }
 
 //position the room only to check if how it changes the edge values of the building

@@ -19,10 +19,12 @@ void UHouseGeneratorController::BeginPlay()
 {
 	Super::BeginPlay();
 
+	//if the user provided at leat one room
 	if (Rooms.Max() > 0) {
 
 		House = Building(1, GridWidht, GridHeight, CorridorWidth);
 		std::vector<Room*> BuildingRooms;
+		//add the rooms to the house
 		for (int i = 0; i < Rooms.Max(); i++)
 		{
 			RoomType RoomType;
@@ -33,7 +35,7 @@ void UHouseGeneratorController::BeginPlay()
 
 			BuildingRooms.push_back(House.AddRoom(Rooms[i].Area, Rooms[i].Name, i, RoomType, &House));
 		}
-		//House.AddConnection(&BuildingRooms[0], &BuildingRooms[1]);
+		//add the connections to the house
 		for (int i = 0; i < RoomsConnections.Max(); i++)
 		{
 			Room* FirstRoom;
@@ -51,44 +53,28 @@ void UHouseGeneratorController::BeginPlay()
 
 			House.AddConnection(FirstRoom, SecondRoom);
 		}
+
+		steady_clock::time_point t1 = steady_clock::now();
+		//generate the floor plan
+		House.GenerateFloorPlan();
+		steady_clock::time_point t2 = steady_clock::now();
+
+		//measure and print the time to generate the floor plan and ratio of space used
+		duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
+		double TimeElapsed = time_span.count();
+		UE_LOG(LogTemp, Warning, TEXT("Time to generate floor plan: %f seconds"), TimeElapsed);
+		UE_LOG(LogTemp, Warning, TEXT("Ratio of space used: %f"), House.CalcutateRatioSpaceUsed());
+
+		t1 = steady_clock::now();
+		//position the meshes on top of the floor plan
+		PositionMesh();
+		t2 = steady_clock::now();
+
+		//measure and print the time to position the meshes
+		time_span = duration_cast<duration<double>>(t2 - t1);
+		TimeElapsed = time_span.count();
+		UE_LOG(LogTemp, Warning, TEXT("Time to position the meshes: %f seconds"), TimeElapsed);
 	}
-	/*
-	House = Building(1, GridWidht, GridHeight, 2);
-	Room LivingRoom = House.AddRoom(20, TEXT("LivingRoom"), 0, Public, &House);
-
-	Room DiningRoom = House.AddRoom(30, TEXT("DiningRoom"), 1, Public, &House);
-	House.AddConnection(&LivingRoom, &DiningRoom);
-
-	Room Kitchen = House.AddRoom(20, TEXT("Kitchen"), 2, Public, &House);
-	House.AddConnection(&Kitchen, &DiningRoom);
-	House.AddConnection(&LivingRoom, &Kitchen);
-
-	Room PrivateHall = House.AddRoom(10, TEXT("PrivateHall"), 3, Private, &House);
-	House.AddConnection(&PrivateHall, &LivingRoom);
-
-
-	Room BedRoom1 = House.AddRoom(25, TEXT("BedRoom1"), 4, Private, &House);
-	House.AddConnection(&BedRoom1, &PrivateHall);
-
-
-	Room BedRoom2 = House.AddRoom(20, TEXT("BedRoom2"), 5, Private, &House);
-	House.AddConnection(&BedRoom2, &PrivateHall);
-
-
-	Room BathRoom1 = House.AddRoom(10, TEXT("BathRoom1"), 6, Public, &House);
-	House.AddConnection(&BathRoom1, &LivingRoom);
-
-
-	Room BathRoom2 = House.AddRoom(10, TEXT("BedRoom2"), 7, Private, &House);
-	House.AddConnection(&BathRoom2, &PrivateHall);*/
-
-
-	/*Room BathRoom = House.AddRoom(30, TEXT("BathRoom"), 6, Private);
-	BathRoom.AddConnectedRoom(&PrivateHall);*/
-
-
-	House.GenerateFloorPlan();
-	PositionMesh();
 }
 
 
@@ -186,10 +172,10 @@ void UHouseGeneratorController::PositionMesh()
 			{
 				//SpawnActorRef = GetWorld()->SpawnActor<AActor>(CorridorFloorMesh, NewLocation, Rotation, SpawnParams);
 
-				if (House.BuildingBlocks[i]->isCorridorUsed)
+				/*if (House.BuildingBlocks[i]->isCorridorUsed)
 					SpawnActorRef = GetWorld()->SpawnActor<AActor>(CorridorUsedFloorMesh, NewLocation, Rotation, SpawnParams);
-				else
-					SpawnActorRef = GetWorld()->SpawnActor<AActor>(CorridorFloorMesh, NewLocation, Rotation, SpawnParams);
+				else*/
+				SpawnActorRef = GetWorld()->SpawnActor<AActor>(CorridorFloorMesh, NewLocation, Rotation, SpawnParams);
 			}
 			//if the block belongs to an exernal wall
 			else if (House.BuildingBlocks[i]->BlockType == EmptyConnectedBlock)

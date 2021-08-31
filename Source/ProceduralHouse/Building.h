@@ -70,6 +70,7 @@ public:
 	void CheckWallsOnEdgeBlock(Block* CurrentBlock);
 	void CheckWallsOnExternalBlock(Block* CurrentBlock);
 	void InserWallsInFrontOfStoop();
+	float CalcutateRatioSpaceUsed();
 
 	//input dimensions of the building
 	int BlockSize = 0;
