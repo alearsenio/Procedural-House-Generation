@@ -9,7 +9,7 @@ class Block;
 
 enum BlockType
 {
-	Empty, RoomInternalBlock, RoomEdgeBlock, CorridorBlock, EmptyConnectedBlock, DoorBlock, ExternalWall
+	Empty, RoomInternalBlock, RoomEdgeBlock, CorridorBlock, EmptyConnectedBlock
 };
 
 enum NormalDirection
@@ -23,6 +23,10 @@ struct Position
 	int Y;
 };
 
+enum SideType
+{
+	Wall, Door, Window, EmptySide
+};
 
 struct RoomConnection
 {
@@ -31,6 +35,8 @@ struct RoomConnection
 	bool AreConnected = false;
 	std::vector<Block*> ConnectionPath;
 	bool HasDoor = false;
+	bool HasFirstCorridorDoor = false;
+	bool HasSecondCorridorDoor = false;
 };
 
 class PROCEDURALHOUSE_API Block
@@ -51,4 +57,5 @@ public:
 	bool isVisited = false;
 	Block* ParentBlockInPath = nullptr;
 	std::vector<RoomConnection*> ConnectionsUsingBlock;
+	SideType Sides[4] = { EmptySide, EmptySide, EmptySide, EmptySide };
 };

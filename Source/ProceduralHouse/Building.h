@@ -58,7 +58,6 @@ public:
 	void PositionGhostRoom(BuildCoordinates BuildCoordinates);
 	int ChooseRandomBestPosition(std::vector<BuildCoordinates> &PossibleBuildConfigurations, float ScoreSum, int NumberOfCombinations);
 	int EvaluateDistance(int PosX, int PosY, Room* Room2);
-	void RemoveAllEmptyConnectedCubes();
 	void FindPathToConnections(Room* Room);
 	void BFSShortestPathLength(RoomConnection* Connection);
 	void MarkNeighboursCorridorBlocks(Block* CurrentBlock, std::vector<Block*>* PossiblePath);
@@ -67,8 +66,10 @@ public:
 	bool IsCorridorUsedByThisRoom(Block* CorridorBlock, Room* CurrentRoom);
 	bool CheckRoomsConnection(Room* Room1, Room* Room2);
 	bool CheckIfIsOnEdge(Block* Block);
-	void CheckWallsOnEdgeBlock(Block* CurrentBlock);
-	void CheckWallsOnExternalBlock(Block* CurrentBlock);
+	void GenerateWalls(Block* CurrentBlock);
+	void SetDoorsForConnection(RoomConnection* Connection);
+	void SetFrontDoor();
+	void GenerateWindows(Room* Room);
 	void InserWallsInFrontOfStoop();
 	float CalcutateRatioSpaceUsed();
 
@@ -96,4 +97,6 @@ public:
 	int FrontSpaceLeftEdge = 0;
 	int FrontSpaceRightEdge = 0;
 	int FrontSpaceTopEdge = 0;
+
+	int FirstRoomWidth = 0;
 };

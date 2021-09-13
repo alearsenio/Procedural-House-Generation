@@ -13,15 +13,6 @@ enum RoomType
 	Public, Private
 };
 
-
-struct Door
-{
-	bool OnCorridor = false;
-	Room* FirstRoom = nullptr;
-	Room* SecondRoom = nullptr;
-	Block* Block = nullptr;
-};
-
 enum MoveDirection 
 {
 	MoveLeft, MoveRight, MoveUp, MoveDown
@@ -44,7 +35,6 @@ public:
 	std::vector<Block*> RoomBlocks;
 	std::vector<Block*> PathBlocks;
 	std::vector<RoomConnection*> RoomConnections;
-	std::vector<Door> RoomDoors;
 	Building* OwnerBuilding;
 	RoomType RoomType;
 	bool IsPositioned = false;

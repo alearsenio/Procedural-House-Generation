@@ -48,9 +48,6 @@ void Building::GenerateFloorPlan()
 			}
 		}
 
-		//remove all the empty connected cubes in the middle of corridors and transform the other ones into external walls
-		//RemoveAllEmptyConnectedCubes();
-		
 		//find the shortest path to connect the rooms in the connections
 		for (int i = 0; i < Connections.size(); i++)
 			BFSShortestPathLength(Connections[i]);
@@ -75,23 +72,26 @@ void Building::GenerateFloorPlan()
 				BuildingBlocks[i]->BlockType = RoomEdgeBlock;
 			}
 		}
-		
-		//determine how many walls every the edge block need to positioned
-		for (int i = 0; i < BuildingBlocks.size(); i++)
-		{
-			if (BuildingBlocks[i]->BlockType == RoomEdgeBlock)
-			{
-				CheckWallsOnEdgeBlock(BuildingBlocks[i]);
-			}
-		}
 
 		//determine how many walls every the external block need to positioned
 		for (int i = 0; i < BuildingBlocks.size(); i++)
 		{
-			if (BuildingBlocks[i]->BlockType == EmptyConnectedBlock)
+			if (BuildingBlocks[i]->BlockType != RoomInternalBlock)
 			{
-				CheckWallsOnExternalBlock(BuildingBlocks[i]);
+				GenerateWalls(BuildingBlocks[i]);
 			}
+		}
+
+		for (int i = 0; i < Connections.size(); i++)
+		{
+			SetDoorsForConnection(Connections[i]);
+		}
+
+		SetFrontDoor();
+
+		for (int i = 0; i < Rooms.size(); i++)
+		{
+			GenerateWindows(Rooms[i]);
 		}
 
 	}
@@ -314,39 +314,6 @@ int Building::EvaluateDistance(int PosX, int PosY, Room* Room2)
 		}
 	}
 	return ShortestDistance;
-}
-
-void Building::RemoveAllEmptyConnectedCubes()
-{
-	BlockType BlockType;
-	int BlockPosX = 0;
-	int BlockPosY = 0;
-	for (int i = 0; i < BuildingBlocks.size(); i++)
-	{
-		if (BuildingBlocks[i]->BlockType == EmptyConnectedBlock)
-		{
-			BlockPosX = BuildingBlocks[i]->PosX;
-			BlockPosY = BuildingBlocks[i]->PosY;
-			int OccupiedNeighboors = 0;
-			if (GetBlock(BlockPosX, BlockPosY - 1))
-				OccupiedNeighboors++;
-			if (GetBlock(BlockPosX, BlockPosY + 1))
-				OccupiedNeighboors++;
-			if (GetBlock(BlockPosX - 1, BlockPosY))
-				OccupiedNeighboors++;
-			if (GetBlock(BlockPosX + 1, BlockPosY))
-				OccupiedNeighboors++;
-			if (OccupiedNeighboors >= 4)
-			{
-				BlockType = CorridorBlock;
-			}
-			else
-			{
-				BlockType = ExternalWall;
-			}
-			BuildingBlocks[i]->BlockType = BlockType;
-		}
-	}
 }
 
 void Building::FindPathToConnections(Room* Room)
@@ -779,34 +746,38 @@ bool Building::CheckIfIsOnEdge(Block* CurrentBlock)
 	return false;
 }
 
-void Building::CheckWallsOnEdgeBlock(Block* CurrentBlock)
+
+void Building::GenerateWalls(Block* CurrentBlock)
 {
-	//check every side block to see if one is not one of your room blocks
+	//check every side block to see if to position a wall a door or a window
 	for (int j = 0; j < 4; j++)
 	{
 		int BlockPosX = CurrentBlock->PosX;
 		int BlockPosY = CurrentBlock->PosY;
 		NormalDirection Direction;
+		NormalDirection NeighbourDirection;
 
 		switch (j)
 		{
 		case 0:
 			BlockPosX--;
 			Direction = Left;
+			NeighbourDirection = Right;
 			break;
 		case 1:
 			BlockPosX++;
 			Direction = Right;
-
+			NeighbourDirection = Left;
 			break;
 		case 2:
 			BlockPosY++;
 			Direction = Up;
-
+			NeighbourDirection = Down;
 			break;
 		case 3:
 			BlockPosY--;
 			Direction = Down;
+			NeighbourDirection = Up;
 			break;
 		default:
 			break;
@@ -814,52 +785,326 @@ void Building::CheckWallsOnEdgeBlock(Block* CurrentBlock)
 
 		Block* NeighbourBlock = GetBlock(BlockPosX, BlockPosY);
 
-		if (!NeighbourBlock || (!NeighbourBlock->OwnerRoom || NeighbourBlock->OwnerRoom != CurrentBlock->OwnerRoom))
+		/*if (NeighbourBlock  && NeighbourBlock->BlockType == RoomEdgeBlock  && NeighbourBlock->OwnerRoom && NeighbourBlock->OwnerRoom != CurrentBlock->OwnerRoom)
 		{
-			CurrentBlock->WallsDirection.push_back(Direction);
+			for (int i = 0; i < CurrentBlock->OwnerRoom->RoomConnections.size(); i++)
+			{
+				if ((CurrentBlock->OwnerRoom->RoomConnections[i]->Room1 == NeighbourBlock->OwnerRoom || CurrentBlock->OwnerRoom->RoomConnections[i]->Room2 == NeighbourBlock->OwnerRoom) && !CurrentBlock->OwnerRoom->RoomConnections[i]->HasDoor)
+				{
+					CurrentBlock->OwnerRoom->RoomConnections[i]->HasDoor = true;
+					CurrentBlock->Sides[Direction] = Door;
+					NeighbourBlock->Sides[NeighbourDirection] = Door;
+
+				}
+			}
+		}*/
+
+		if (CurrentBlock->BlockType == RoomEdgeBlock && (!NeighbourBlock || (!NeighbourBlock->OwnerRoom || NeighbourBlock->OwnerRoom != CurrentBlock->OwnerRoom)))
+		{
+			CurrentBlock->Sides[Direction] = Wall;
+
+			/*if(NeighbourBlock && NeighbourBlock->BlockType == RoomEdgeBlock && NeighbourBlock->OwnerRoom && NeighbourBlock->OwnerRoom != CurrentBlock->OwnerRoom)
+			{
+				for (int i = 0; i < CurrentBlock->OwnerRoom->RoomConnections.size(); i++)
+				{
+					if ((CurrentBlock->OwnerRoom->RoomConnections[i]->Room1 == NeighbourBlock->OwnerRoom || CurrentBlock->OwnerRoom->RoomConnections[i]->Room2 == NeighbourBlock->OwnerRoom) && !CurrentBlock->OwnerRoom->RoomConnections[i]->HasDoor)
+					{
+						CurrentBlock->OwnerRoom->RoomConnections[i]->HasDoor = true;
+						CurrentBlock->Sides[Direction] = Door;
+						NeighbourBlock->Sides[NeighbourDirection] = Door;
+
+					}
+				}
+			}*/
+		}
+
+		if (CurrentBlock->BlockType == EmptyConnectedBlock && (NeighbourBlock && NeighbourBlock->BlockType != EmptyConnectedBlock))
+		{
+			CurrentBlock->Sides[Direction] = Wall;
 		}
 	}
 }
 
-void Building::CheckWallsOnExternalBlock(Block* CurrentBlock)
+void Building::SetDoorsForConnection(RoomConnection* Connection)
 {
-	//check every side block to see if it belongs to a a room or a corridor
-	for (int j = 0; j < 4; j++)
+	Room* FirstRoom = Connection->Room1;
+	Room* SecondRoom = Connection->Room2;
+
+	for (int BlockNumber = 0; BlockNumber < FirstRoom->RoomBlocks.size(); BlockNumber++)
 	{
-		int BlockPosX = CurrentBlock->PosX;
-		int BlockPosY = CurrentBlock->PosY;
-		NormalDirection Direction;
+		Block* CurrentBlock = FirstRoom->RoomBlocks[BlockNumber];
 
-		switch (j)
+		if (CurrentBlock->BlockType == RoomEdgeBlock)
 		{
-		case 0:
-			BlockPosX--;
-			Direction = Left;
-			break;
-		case 1:
-			BlockPosX++;
-			Direction = Right;
+			for (int j = 0; j < 4; j++)
+			{
+				int BlockPosX = CurrentBlock->PosX;
+				int BlockPosY = CurrentBlock->PosY;
+				NormalDirection Direction;
+				NormalDirection NeighbourDirection;
 
-			break;
-		case 2:
-			BlockPosY++;
-			Direction = Up;
+				switch (j)
+				{
+				case 0:
+					BlockPosX--;
+					Direction = Left;
+					NeighbourDirection = Right;
+					break;
+				case 1:
+					BlockPosX++;
+					Direction = Right;
+					NeighbourDirection = Left;
+					break;
+				case 2:
+					BlockPosY++;
+					Direction = Up;
+					NeighbourDirection = Down;
+					break;
+				case 3:
+					BlockPosY--;
+					Direction = Down;
+					NeighbourDirection = Up;
+					break;
+				default:
+					break;
+				}
 
-			break;
-		case 3:
-			BlockPosY--;
-			Direction = Down;
-			break;
-		default:
-			break;
+				Block* NeighbourBlock = GetBlock(BlockPosX, BlockPosY);
+
+				if (NeighbourBlock && NeighbourBlock->BlockType == RoomEdgeBlock && NeighbourBlock->OwnerRoom && NeighbourBlock->OwnerRoom != CurrentBlock->OwnerRoom && (Connection->Room1 == NeighbourBlock->OwnerRoom || Connection->Room2 == NeighbourBlock->OwnerRoom) && !Connection->HasDoor)
+				{
+					Connection->HasDoor = true;
+					CurrentBlock->Sides[Direction] = Door;
+					NeighbourBlock->Sides[NeighbourDirection] = Door;
+
+				}
+			}
 		}
-
-		Block* NeighbourBlock = GetBlock(BlockPosX, BlockPosY);
-
-		if (NeighbourBlock && NeighbourBlock->BlockType != EmptyConnectedBlock)
+	}
+	//if there are no adjacent walls to create a door, put the doors on the corricors
+	if (Connection->HasDoor == false)
+	{
+		if (Connection->ConnectionPath.size() >= 0)
 		{
-			CurrentBlock->WallsDirection.push_back(Direction);
+			Block* FirstCorridorBlock = nullptr;
+			Block* LastCorridordBlock = nullptr;
+
+			//find the first  and the last corridor block in the path. which are the corridor blocks where to put the doors
+			for (size_t i = 0; i < Connection->ConnectionPath.size(); i++)
+			{
+				if (Connection->ConnectionPath[i]->BlockType == CorridorBlock && !FirstCorridorBlock)
+				{
+					FirstCorridorBlock = Connection->ConnectionPath[i];
+					LastCorridordBlock = Connection->ConnectionPath[i];
+				}
+				else if ((Connection->ConnectionPath[i]->BlockType == CorridorBlock))
+				{
+					LastCorridordBlock = Connection->ConnectionPath[i];
+				}
+			}
+
+			Room* FirstRoomDoor = nullptr;
+			//create a door for for both side of the corridor path
+			for (int h = 1; h <= 2; h++)
+			{
+				Block* CurrentBlock = nullptr;
+				bool* DoorCheck = nullptr;
+				if (h == 1)
+				{
+					CurrentBlock = FirstCorridorBlock;
+					DoorCheck = &Connection->HasFirstCorridorDoor;
+				}
+				else if (h == 2 && FirstCorridorBlock != LastCorridordBlock)
+				{
+					CurrentBlock = LastCorridordBlock;
+					DoorCheck = &Connection->HasSecondCorridorDoor;
+				}
+				else
+				{
+					break;
+				}
+
+				if (CurrentBlock)
+				{
+					
+					for (int j = 0; j < 4; j++)
+					{
+						int BlockPosX = CurrentBlock->PosX;
+						int BlockPosY = CurrentBlock->PosY;
+						NormalDirection Direction;
+						NormalDirection NeighbourDirection;
+
+
+						switch (j)
+						{
+						case 0:
+							BlockPosX--;
+							Direction = Left;
+							NeighbourDirection = Right;
+							break;
+						case 1:
+							BlockPosX++;
+							Direction = Right;
+							NeighbourDirection = Left;
+							break;
+						case 2:
+							BlockPosY++;
+							Direction = Up;
+							NeighbourDirection = Down;
+							break;
+						case 3:
+							BlockPosY--;
+							Direction = Down;
+							NeighbourDirection = Up;
+							break;
+						default:
+							break;
+						}
+
+						Block* NeighbourBlock = GetBlock(BlockPosX, BlockPosY);
+
+						if (NeighbourBlock && NeighbourBlock->BlockType == RoomEdgeBlock && NeighbourBlock->OwnerRoom != FirstRoomDoor && (Connection->Room1 == NeighbourBlock->OwnerRoom || Connection->Room2 == NeighbourBlock->OwnerRoom))
+						{
+							FirstRoomDoor = CurrentBlock->OwnerRoom;
+							*DoorCheck = true;
+							CurrentBlock->Sides[Direction] = Door;
+							NeighbourBlock->Sides[NeighbourDirection] = Door;
+						}
+					}
+				}
+			}
 		}
+	}
+}
+
+void Building::SetFrontDoor()
+{
+
+		if(Rooms[0]->IsPositioned)
+		{
+
+			Block* CurrentBlock = GetBlock(FirstRoomWidth/2,0);
+
+				for (int j = 0; j < 4; j++)
+				{
+					int BlockPosX = CurrentBlock->PosX;
+					int BlockPosY = CurrentBlock->PosY;
+					NormalDirection Direction;
+					NormalDirection NeighbourDirection;
+
+					switch (j)
+					{
+					case 0:
+						BlockPosX--;
+						Direction = Left;
+						NeighbourDirection = Right;
+						break;
+					case 1:
+						BlockPosX++;
+						Direction = Right;
+						NeighbourDirection = Left;
+						break;
+					case 2:
+						BlockPosY++;
+						Direction = Up;
+						NeighbourDirection = Down;
+						break;
+					case 3:
+						BlockPosY--;
+						Direction = Down;
+						NeighbourDirection = Up;
+						break;
+					default:
+						break;
+					}
+
+					Block* NeighbourBlock = GetBlock(BlockPosX, BlockPosY);
+
+					if (NeighbourBlock && NeighbourBlock->BlockType == EmptyConnectedBlock)
+					{
+						CurrentBlock->Sides[Direction] = Door;
+						NeighbourBlock->Sides[NeighbourDirection] = Door;
+
+					}
+				}
+
+	}
+}
+
+void Building::GenerateWindows(Room* Room)
+{
+
+	struct WindowPos
+	{
+		Block* FirstBlock;
+		Block* SecondBlock;
+		NormalDirection FirstBlockDirection;
+		NormalDirection SecondBlockDirection;
+	};
+
+	std::vector<WindowPos> PossibleWindowsBlock;
+
+	for (size_t i = 0; i < Room->RoomBlocks.size(); i++)
+	{
+		Block* CurrentBlock = Room->RoomBlocks[i];
+
+		if (CurrentBlock->BlockType == RoomEdgeBlock)
+		{
+
+			for (int j = 0; j < 4; j++)
+			{
+				int BlockPosX = CurrentBlock->PosX;
+				int BlockPosY = CurrentBlock->PosY;
+				NormalDirection Direction;
+				NormalDirection NeighbourDirection;
+
+				switch (j)
+				{
+				case 0:
+					BlockPosX--;
+					Direction = Left;
+					NeighbourDirection = Right;
+					break;
+				case 1:
+					BlockPosX++;
+					Direction = Right;
+					NeighbourDirection = Left;
+					break;
+				case 2:
+					BlockPosY++;
+					Direction = Up;
+					NeighbourDirection = Down;
+					break;
+				case 3:
+					BlockPosY--;
+					Direction = Down;
+					NeighbourDirection = Up;
+					break;
+				default:
+					break;
+				}
+
+				Block* NeighbourBlock = GetBlock(BlockPosX, BlockPosY);
+
+				if (CurrentBlock->Sides[Direction] == Wall && NeighbourBlock && NeighbourBlock->BlockType == EmptyConnectedBlock)
+				{
+					WindowPos PossibleWindow;
+					PossibleWindow.FirstBlock = CurrentBlock;
+					PossibleWindow.SecondBlock = NeighbourBlock;
+					PossibleWindow.FirstBlockDirection = Direction;
+					PossibleWindow.SecondBlockDirection = NeighbourDirection;
+					PossibleWindowsBlock.push_back(PossibleWindow);
+				}
+			}
+		}
+	}
+
+	//if the room has at least one block facing outside
+	if (PossibleWindowsBlock.size() > 0)
+	{
+		int WindowID = std::rand() % PossibleWindowsBlock.size();
+		PossibleWindowsBlock[WindowID].FirstBlock->Sides[PossibleWindowsBlock[WindowID].FirstBlockDirection] = Window;
+		PossibleWindowsBlock[WindowID].SecondBlock->Sides[PossibleWindowsBlock[WindowID].SecondBlockDirection] = EmptySide;
 	}
 }
 
@@ -1083,16 +1328,6 @@ void Building::PositionRoom(bool WithCorridors, Room* currentRoom, BuildCoordina
 		}
 	}
 
-	////get the block at the beginning of the positioning and make it the corridor door
-	//Block* BlockDoor = GetBlock(StartingPointX, StartingPointY);
-	//BlockDoor->BlockType = DoorBlock;
-	//Door CorridorDoor;
-	//CorridorDoor.OnCorridor = true;
-	//CorridorDoor.FirstRoom = currentRoom;
-	//CorridorDoor.SecondRoom = nullptr;
-	//CorridorDoor.Block = BlockDoor;
-	//currentRoom->RoomDoors.push_back(CorridorDoor);
-
 	//set the room to positioned
 	currentRoom->IsPositioned = true;
 }
@@ -1101,7 +1336,7 @@ void Building::PositionFirstRoom(Room* Room)
 {
 	//position the first room
 	std::vector<RoomWidthHeight> PossibleAspectRatios = *FindPossibleAspectRatios(Room->Area);
-	
+
 	if (PossibleAspectRatios.size() > 0)
 	{
 		//prepare coordinates for the first room
@@ -1113,14 +1348,15 @@ void Building::PositionFirstRoom(Room* Room)
 		BuildCoordinates.NormalBuildDirection = Up;
 		BuildCoordinates.TangentBuildDirection = Normal;
 
+		FirstRoomWidth = PossibleAspectRatios[0].Width;
 		//define the space for the stoop
 		FrontSpaceLeftEdge = 0;
 		FrontSpaceRightEdge = BuildCoordinates.RoomWidth - 1;
-		FrontSpaceTopEdge = 0;
+		FrontSpaceTopEdge = -1;
 
 		PositionRoom(true, Rooms[0], BuildCoordinates);
 
-		
+
 	}
 }
 
@@ -1297,6 +1533,16 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 				CurrentBlock->NormalDirection = BuildDirectionX;
 			}
 		}
+		else if (IsInFrontOfFrontDoor(NewX, PosY))
+		{
+			//get the free block next to the current room block
+			Block* CurrentBlock = GetBlock(NewX, PosY);
+			if (CurrentBlock == nullptr)//if the block is not busy, add a connected block beside the the corridor blocks
+			{
+				CurrentBlock = AddBlock(NewX, PosY, EmptyConnectedBlock, nullptr);
+				CurrentBlock->NormalDirection = BuildDirectionX;
+			}
+		}
 
 		if (NewY != PosY && !IsInFrontOfFrontDoor(PosX, NewY))
 		{
@@ -1320,6 +1566,16 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 				CurrentBlock->CorridorId = CorridorLinesCount;
 			}
 			else if (CurrentBlock == nullptr)//if the block is not busy, add a connected block beside the the corridor blocks
+			{
+				CurrentBlock = AddBlock(PosX, NewY, EmptyConnectedBlock, nullptr);
+				CurrentBlock->NormalDirection = BuildDirectionY;
+			}
+		}
+		else if (IsInFrontOfFrontDoor(PosX, NewY))
+		{
+			//get the free block next to the current room block
+			Block* CurrentBlock = GetBlock(PosX, NewY);
+			if (CurrentBlock == nullptr)//if the block is not busy, add a connected block beside the the corridor blocks
 			{
 				CurrentBlock = AddBlock(PosX, NewY, EmptyConnectedBlock, nullptr);
 				CurrentBlock->NormalDirection = BuildDirectionY;
@@ -1395,7 +1651,19 @@ void Building::CreateCorridorBlocks(int PosX, int PosY, int StartingPointX, int 
 							CurrentBlock->NormalDirection = BuildDirectionX;
 						else
 							CurrentBlock->NormalDirection = BuildDirectionY;
-
+					}
+				}
+				else if(IsInFrontOfFrontDoor(NewX, NewY))
+				{
+					//get the free block next to the current room block
+					CurrentBlock = GetBlock(NewX, NewY);
+					if (CurrentBlock == nullptr)//if the block is not busy, add a connected block beside the the corridor blocks
+					{
+						CurrentBlock = AddBlock(NewX, NewY, EmptyConnectedBlock, nullptr);
+						if (i > j)
+							CurrentBlock->NormalDirection = BuildDirectionX;
+						else
+							CurrentBlock->NormalDirection = BuildDirectionY;
 					}
 				}
 			}

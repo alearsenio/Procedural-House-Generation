@@ -66,11 +66,13 @@ public:
 	UPROPERTY(EditAnywhere, Category = "House Componenets")
 	TSubclassOf<AActor> CorridorFloorMesh;
 	UPROPERTY(EditAnywhere, Category = "House Componenets")
-		TSubclassOf<AActor> CorridorUsedFloorMesh;
+	TSubclassOf<AActor> CorridorUsedFloorMesh;
 	UPROPERTY(EditAnywhere, Category = "House Componenets")
 	TSubclassOf<AActor> DoorMesh;
 	UPROPERTY(EditAnywhere, Category = "House Componenets")
 	TSubclassOf<AActor> ExternalWallMesh;
+	UPROPERTY(EditAnywhere, Category = "House Componenets")
+		TSubclassOf<AActor> WindowMesh;
 	UPROPERTY(EditAnywhere, Category = "House Componenets")
 	float ModulesWidth;
 	UPROPERTY(EditAnywhere, Category = "House Componenets")
