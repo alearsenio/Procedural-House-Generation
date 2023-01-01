@@ -1,4 +1,4 @@
-# ProceduralHouseGeneration
+# Procedural House Generation in C++ and Unreal Engine 4
 
 Description:
 For my master project, I developed a novel techinique for the procedural generation of suburban houses with integrated floor plan, 
